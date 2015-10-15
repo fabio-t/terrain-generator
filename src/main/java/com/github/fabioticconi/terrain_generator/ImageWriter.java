@@ -45,8 +45,22 @@ public class ImageWriter
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
     }
 
-    Color getColor(final float t)
+    Color getColor(float t)
     {
+        t = (1f + t) / 2f;
+        // value = 0.5f + value;
+
+        if (t > 1f)
+        {
+            // System.out.println("error: " + value);
+            t = 1f;
+        }
+        if (t < 0f)
+        {
+            // System.out.println("error: " + value);
+            t = 0f;
+        }
+
         final float water = 0.3f;
 
         if (t < water)
@@ -71,11 +85,31 @@ public class ImageWriter
                 return Color.GREEN;
             else if (val < 0.55f)
                 return new Color(.1f, 0.8f, .2f);
-            else if (val < 0.8f)
+            else if (val < 0.7f)
                 return Color.GRAY;
             else
                 return Color.WHITE;
         }
+    }
+
+    Color getColor2(final float t)
+    {
+        if (t < -0.5f)
+            return new Color(0, 0, 128);
+        else if (t < -0.3f)
+            return new Color(0, 0, 255);
+        else if (t < -0.4f)
+            return new Color(0, 128, 255);
+        else if (t < 0f)
+            return new Color(240, 240, 64);
+        else if (t < 0.25f)
+            return new Color(32, 160, 0);
+        else if (t < 0.5f)
+            return new Color(224, 224, 0);
+        else if (t < 0.85f)
+            return new Color(128, 128, 128);
+        else
+            return new Color(255, 255, 255);
     }
 
     public void savePng(final String filename, final float[][] map)
@@ -89,28 +123,16 @@ public class ImageWriter
         {
             for (int x = 0; x < width; x++)
             {
-                if (map[x][y] < min)
+                value = map[x][y];
+
+                if (value < min)
                 {
-                    min = map[x][y];
+                    min = value;
                 }
 
-                if (map[x][y] > max)
+                if (value > max)
                 {
-                    max = map[x][y];
-                }
-
-                value = (1f + map[x][y]) / 2f;
-                // value = 0.5f + map[x][y];
-
-                if (value > 1f)
-                {
-                    // System.out.println("error: " + value);
-                    value = 1f;
-                }
-                if (value < 0f)
-                {
-                    // System.out.println("error: " + value);
-                    value = 0f;
+                    max = value;
                 }
 
                 Color col;
@@ -127,6 +149,8 @@ public class ImageWriter
                 image.setRGB(x, y, col.getRGB());
             }
         }
+
+        image.setRGB(map.length / 2, map[0].length / 2, new Color(255, 0, 0).getRGB());
 
         System.out.println(min + " " + max);
 

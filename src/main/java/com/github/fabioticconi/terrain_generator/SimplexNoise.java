@@ -127,7 +127,7 @@ public class SimplexNoise
         {
             i1 = 1;
             j1 = 0;
-        }                                                                                                                                                                                                                                                                // lower
+        }                                                                                                                                                                                                                                                                       // lower
         // triangle,
         // XY
         // order:
@@ -136,7 +136,7 @@ public class SimplexNoise
         {
             i1 = 0;
             j1 = 1;
-        }                                                                                                                                                                                                                                                                     // upper
+        }                                                                                                                                                                                                                                                                            // upper
         // triangle,
         // YX
         // order:
@@ -220,7 +220,7 @@ public class SimplexNoise
                 i2 = 1;
                 j2 = 1;
                 k2 = 0;
-            }                                                                                                                                                                                                                                                                // X
+            }                                                                                                                                                                                                                                                                       // X
             // Y
             // Z
             // order
@@ -232,7 +232,7 @@ public class SimplexNoise
                 i2 = 1;
                 j2 = 0;
                 k2 = 1;
-            }                                                                                                                                                                                                                                                                // X
+            }                                                                                                                                                                                                                                                                       // X
             // Z
             // Y
             // order
@@ -244,7 +244,7 @@ public class SimplexNoise
                 i2 = 1;
                 j2 = 0;
                 k2 = 1;
-            }                                                                                                                                                                                                                                                                // Z
+            }                                                                                                                                                                                                                                                                       // Z
             // X
             // Y
             // order
@@ -259,7 +259,7 @@ public class SimplexNoise
                 i2 = 0;
                 j2 = 1;
                 k2 = 1;
-            }                                                                                                                                                                                                                                                                // Z
+            }                                                                                                                                                                                                                                                                       // Z
             // Y
             // X
             // order
@@ -271,7 +271,7 @@ public class SimplexNoise
                 i2 = 0;
                 j2 = 1;
                 k2 = 1;
-            }                                                                                                                                                                                                                                                                // Y
+            }                                                                                                                                                                                                                                                                       // Y
             // Z
             // X
             // order
@@ -283,7 +283,7 @@ public class SimplexNoise
                 i2 = 1;
                 j2 = 1;
                 k2 = 0;
-            }                                                                                                                                                                                                                                                                // Y
+            }                                                                                                                                                                                                                                                                       // Y
             // X
             // Z
             // order
@@ -558,25 +558,6 @@ public class SimplexNoise
         }
     }
 
-    // copyright "longshorts" from java-programming.com
-
-    public static float[][] generateSimplexNoise(final int width, final int height)
-    {
-        final float[][] simplexnoise = new float[width][height];
-        final float frequency = 5.0f / width;
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                simplexnoise[x][y] = (float) noise(x * frequency, y * frequency);
-                simplexnoise[x][y] = (simplexnoise[x][y] + 1) / 2; // generate values between 0 and 1
-            }
-        }
-
-        return simplexnoise;
-    }
-
     public static float[][] generateOctavedSimplexNoise(final int width,
                                                         final int height,
                                                         final int octaves,
@@ -588,11 +569,6 @@ public class SimplexNoise
         float layerWeight = 1f;
         float weightSum = 0f;
 
-        final int xStart = 0;
-        final int xEnd = width * 4;
-        final int yStart = 0;
-        final int yEnd = height * 4;
-
         for (int octave = 0; octave < octaves; octave++)
         {
             // Calculate single layer/octave of simplex noise, then add it to total noise
@@ -600,10 +576,7 @@ public class SimplexNoise
             {
                 for (int y = 0; y < height; y++)
                 {
-                    final int nx = (int) (xStart + x * ((xEnd - xStart) / width));
-                    final int ny = (int) (yStart + y * ((yEnd - yStart) / height));
-
-                    totalNoise[x][y] += (float) noise(nx * layerFrequency, ny * layerFrequency) * layerWeight;
+                    totalNoise[x][y] += (float) noise(x * layerFrequency, y * layerFrequency) * layerWeight;
                 }
             }
 
@@ -624,58 +597,107 @@ public class SimplexNoise
         return totalNoise;
     }
 
-    public static float[][] generateOctavedSimplexNoise(final int width,
-                                                        final int height,
-                                                        final int octaves,
-                                                        final float roughness)
-    {
-        final float[][] totalNoise = new float[width][height];
+    // public static float[][] generateOctavedSimplexNoise(final int width,
+    // final int height,
+    // final int octaves,
+    // final float roughness,
+    // final float scale,
+    // int resolutionX,
+    // int resolutionY)
+    // {
+    // final float[][] totalNoise = new float[width][height];
+    // float layerFrequency = scale;
+    // float layerWeight = 1f;
+    // float weightSum = 0f;
+    //
+    // final int xStart = 0;
+    // final int xEnd = width * resolutionX;
+    // final int yStart = 0;
+    // final int yEnd = height * resolutionY;
+    //
+    // for (int octave = 0; octave < octaves; octave++)
+    // {
+    // // Calculate single layer/octave of simplex noise, then add it to total noise
+    // for (int x = 0; x < width; x++)
+    // {
+    // for (int y = 0; y < height; y++)
+    // {
+    // final int nx = (int) (xStart + x * ((xEnd - xStart) / width));
+    // final int ny = (int) (yStart + y * ((yEnd - yStart) / height));
+    //
+    // totalNoise[x][y] += (float) noise(nx * layerFrequency, ny * layerFrequency) * layerWeight;
+    // }
+    // }
+    //
+    // // Increase variables with each incrementing octave
+    // layerFrequency *= 2f;
+    // weightSum += layerWeight;
+    // layerWeight *= roughness;
+    // }
+    //
+    // for (int x = 0; x < width; x++)
+    // {
+    // for (int y = 0; y < height; y++)
+    // {
+    // totalNoise[x][y] /= weightSum;
+    // }
+    // }
+    //
+    // return totalNoise;
+    // }
 
-        for (int octave = 0; octave < octaves; octave++)
-        {
-            final double frequency = 1 << octave; // powers of two
-            final double amplitude = Math.pow(roughness, octaves - octave);
-
-            // Calculate single layer/octave of simplex noise, then add it to total noise
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    totalNoise[x][y] += (float) noise(x / frequency, y / frequency) * amplitude;
-                }
-            }
-        }
-
-        return totalNoise;
-    }
-
-    public static float[][] generateOctavedSimplexNoise(final int width, final int height, final int octaves)
-    {
-        final float[][] totalNoise = new float[width][height];
-
-        float frequencyX = width / 2f;
-        float frequencyY = height / 2f;
-        float amplitude = 1f;
-
-        final float div = (1 << octaves) - 1f;
-
-        for (int octave = 0; octave < octaves; octave++)
-        {
-            // Calculate single layer/octave of simplex noise, then add it to total noise
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    totalNoise[x][y] += (float) noise(x / frequencyX, y / frequencyY) * amplitude * div;
-                }
-            }
-
-            frequencyX *= 2f;
-            frequencyY *= 2f;
-
-            amplitude *= 2f;
-        }
-
-        return totalNoise;
-    }
+    // public static float[][] generateOctavedSimplexNoise(final int width,
+    // final int height,
+    // final int octaves,
+    // final float roughness)
+    // {
+    // final float[][] totalNoise = new float[width][height];
+    //
+    // for (int octave = 0; octave < octaves; octave++)
+    // {
+    // final double frequency = 1 << octave; // powers of two
+    // final double amplitude = Math.pow(roughness, octaves - octave);
+    //
+    // // Calculate single layer/octave of simplex noise, then add it to total noise
+    // for (int x = 0; x < width; x++)
+    // {
+    // for (int y = 0; y < height; y++)
+    // {
+    // totalNoise[x][y] += (float) noise(x / frequency, y / frequency) * amplitude;
+    // }
+    // }
+    // }
+    //
+    // return totalNoise;
+    // }
+    //
+    // public static float[][] generateOctavedSimplexNoise(final int width, final int height, final int octaves)
+    // {
+    // final float[][] totalNoise = new float[width][height];
+    //
+    // float frequencyX = width / 2f;
+    // float frequencyY = height / 2f;
+    // float amplitude = 1f;
+    //
+    // final float div = (1 << octaves) - 1f;
+    //
+    // for (int octave = 0; octave < octaves; octave++)
+    // {
+    // // Calculate single layer/octave of simplex noise, then add it to total noise
+    // for (int x = 0; x < width; x++)
+    // {
+    // for (int y = 0; y < height; y++)
+    // {
+    // totalNoise[x][y] += (float) noise(x / frequencyX, y / frequencyY) * amplitude * div;
+    // }
+    // }
+    //
+    // frequencyX *= 2f;
+    // frequencyY *= 2f;
+    //
+    // amplitude *= 2f;
+    // }
+    //
+    // return totalNoise;
+    // }
 }
