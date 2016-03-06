@@ -4,7 +4,7 @@ package com.github.fabioticconi.terrain_generator;
  * Hello world!
  *
  */
-public class App
+public class TerrainGenerator
 {
     public static void main(final String[] args)
     {
