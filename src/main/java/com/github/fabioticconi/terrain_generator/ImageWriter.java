@@ -1,17 +1,17 @@
 /**
  * Copyright 2015 Fabio Ticconi
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.github.fabioticconi.terrain_generator;
 
@@ -28,10 +28,10 @@ import javax.imageio.ImageIO;
  */
 public class ImageWriter
 {
-    boolean grey;
+    boolean             grey;
 
-    int width;
-    int height;
+    int                 width;
+    int                 height;
 
     final BufferedImage image;
 
@@ -48,7 +48,8 @@ public class ImageWriter
     Color getColor(float t)
     {
         t = (1f + t) / 2f;
-        // value = 0.5f + value;
+        // t = 0.5f + t;
+        // t = Math.abs(t);
 
         if (t > 1f)
         {
@@ -69,8 +70,7 @@ public class ImageWriter
                 return new Color(0.2f, 0.5f, 0.9f);
             else
                 return new Color(0.4f, 0.7f, 1f);
-        }
-        else
+        } else
         {
             // final float val = t;
             // normalize val so 0 is at water level
@@ -114,7 +114,8 @@ public class ImageWriter
 
     public void savePng(final String filename, final float[][] map)
     {
-        // this takes an array of float between -1 and 1 and generates a grey scale image from them
+        // this takes an array of float between -1 and 1 and generates a grey
+        // scale image from them
 
         float min = Float.MAX_VALUE;
         float max = -Float.MAX_VALUE;
@@ -139,9 +140,22 @@ public class ImageWriter
 
                 if (grey)
                 {
+                    value = (1f + value) / 2f;
+                    // value = 0.5f + value;
+                    // value = Math.abs(value);
+
+                    if (value > 1f)
+                    {
+                        System.out.println("error: " + value);
+                        value = 1f;
+                    }
+                    if (value < 0f)
+                    {
+                        System.out.println("error: " + value);
+                        value = 0f;
+                    }
                     col = new Color(value, value, value);
-                }
-                else
+                } else
                 {
                     col = getColor(value);
                 }
@@ -150,20 +164,20 @@ public class ImageWriter
             }
         }
 
-        image.setRGB(map.length / 2, map[0].length / 2, new Color(255, 0, 0).getRGB());
+        // image.setRGB(map.length / 2, map[0].length / 2, new Color(255, 0,
+        // 0).getRGB());
 
-        System.out.println(min + " " + max);
+        // System.out.println(min + " " + max);
 
         try
         {
-            // retrieve image
             final File outputfile = new File(filename);
             outputfile.createNewFile();
 
             ImageIO.write(image, "png", outputfile);
         } catch (final IOException e)
         {
-            throw new RuntimeException("I didn't handle this very well");
+            throw new RuntimeException("Failed to create the file");
         }
     }
 }
