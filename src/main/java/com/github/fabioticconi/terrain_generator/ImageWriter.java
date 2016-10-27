@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Fabio Ticconi
+/*
+ * Copyright (c) 2016 Fabio Ticconi
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package com.github.fabioticconi.terrain_generator;
 
 import java.awt.Color;
@@ -28,10 +29,10 @@ import javax.imageio.ImageIO;
  */
 public class ImageWriter
 {
-    boolean             grey;
+    boolean grey;
 
-    int                 width;
-    int                 height;
+    int width;
+    int height;
 
     final BufferedImage image;
 
