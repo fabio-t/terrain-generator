@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2017 Fabio Ticconi
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package com.github.fabioticconi.terrain_generator.noise;
 
 /**
@@ -16,10 +32,16 @@ package com.github.fabioticconi.terrain_generator.noise;
  */
 public class SimplexNoise
 { // Simplex noise in 2D, 3D and 4D
+    // Skewing and unskewing factors for 2, 3, and 4 dimensions
+    private static final double F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+    private static final double G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+    private static final double F3 = 1.0 / 3.0;
+    private static final double G3 = 1.0 / 6.0;
+    private static final double F4 = (Math.sqrt(5.0) - 1.0) / 4.0;
+    private static final double G4 = (5.0 - Math.sqrt(5.0)) / 20.0;
     private static Grad grad3[] = { new Grad(1, 1, 0), new Grad(-1, 1, 0), new Grad(1, -1, 0), new Grad(-1, -1, 0),
                                     new Grad(1, 0, 1), new Grad(-1, 0, 1), new Grad(1, 0, -1), new Grad(-1, 0, -1),
                                     new Grad(0, 1, 1), new Grad(0, -1, 1), new Grad(0, 1, -1), new Grad(0, -1, -1) };
-
     private static Grad grad4[] = { new Grad(0, 1, 1, 1), new Grad(0, 1, 1, -1), new Grad(0, 1, -1, 1),
                                     new Grad(0, 1, -1, -1), new Grad(0, -1, 1, 1), new Grad(0, -1, 1, -1),
                                     new Grad(0, -1, -1, 1), new Grad(0, -1, -1, -1), new Grad(1, 0, 1, 1),
@@ -31,7 +53,6 @@ public class SimplexNoise
                                     new Grad(1, 1, 1, 0), new Grad(1, 1, -1, 0), new Grad(1, -1, 1, 0),
                                     new Grad(1, -1, -1, 0), new Grad(-1, 1, 1, 0), new Grad(-1, 1, -1, 0),
                                     new Grad(-1, -1, 1, 0), new Grad(-1, -1, -1, 0) };
-
     private static short p[]         = { 151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36,
                                          103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75,
                                          0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149,
@@ -60,14 +81,6 @@ public class SimplexNoise
             permMod12[i] = (short) (perm[i] % 12);
         }
     }
-
-    // Skewing and unskewing factors for 2, 3, and 4 dimensions
-    private static final double F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-    private static final double G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-    private static final double F3 = 1.0 / 3.0;
-    private static final double G3 = 1.0 / 6.0;
-    private static final double F4 = (Math.sqrt(5.0) - 1.0) / 4.0;
-    private static final double G4 = (5.0 - Math.sqrt(5.0)) / 20.0;
 
     // This method is a *lot* faster than using (int)Math.floor(x)
     private static int fastfloor(final double x)
@@ -146,7 +159,8 @@ public class SimplexNoise
         if (t0 < 0)
         {
             n0 = 0.0;
-        } else
+        }
+        else
         {
             t0 *= t0;
             n0 = t0 * t0 * dot(grad3[gi0], x0, y0); // (x,y) of grad3 used for
@@ -156,7 +170,8 @@ public class SimplexNoise
         if (t1 < 0)
         {
             n1 = 0.0;
-        } else
+        }
+        else
         {
             t1 *= t1;
             n1 = t1 * t1 * dot(grad3[gi1], x1, y1);
@@ -165,7 +180,8 @@ public class SimplexNoise
         if (t2 < 0)
         {
             n2 = 0.0;
-        } else
+        }
+        else
         {
             t2 *= t2;
             n2 = t2 * t2 * dot(grad3[gi2], x2, y2);
@@ -236,7 +252,8 @@ public class SimplexNoise
             // X
             // Y
             // order
-        } else
+        }
+        else
         { // x0<y0
             if (y0 < z0)
             {
@@ -306,7 +323,8 @@ public class SimplexNoise
         if (t0 < 0)
         {
             n0 = 0.0;
-        } else
+        }
+        else
         {
             t0 *= t0;
             n0 = t0 * t0 * dot(grad3[gi0], x0, y0, z0);
@@ -315,7 +333,8 @@ public class SimplexNoise
         if (t1 < 0)
         {
             n1 = 0.0;
-        } else
+        }
+        else
         {
             t1 *= t1;
             n1 = t1 * t1 * dot(grad3[gi1], x1, y1, z1);
@@ -324,7 +343,8 @@ public class SimplexNoise
         if (t2 < 0)
         {
             n2 = 0.0;
-        } else
+        }
+        else
         {
             t2 *= t2;
             n2 = t2 * t2 * dot(grad3[gi2], x2, y2, z2);
@@ -333,7 +353,8 @@ public class SimplexNoise
         if (t3 < 0)
         {
             n3 = 0.0;
-        } else
+        }
+        else
         {
             t3 *= t3;
             n3 = t3 * t3 * dot(grad3[gi3], x3, y3, z3);
@@ -379,42 +400,48 @@ public class SimplexNoise
         if (x0 > y0)
         {
             rankx++;
-        } else
+        }
+        else
         {
             ranky++;
         }
         if (x0 > z0)
         {
             rankx++;
-        } else
+        }
+        else
         {
             rankz++;
         }
         if (x0 > w0)
         {
             rankx++;
-        } else
+        }
+        else
         {
             rankw++;
         }
         if (y0 > z0)
         {
             ranky++;
-        } else
+        }
+        else
         {
             rankz++;
         }
         if (y0 > w0)
         {
             ranky++;
-        } else
+        }
+        else
         {
             rankw++;
         }
         if (z0 > w0)
         {
             rankz++;
-        } else
+        }
+        else
         {
             rankw++;
         }
@@ -481,7 +508,8 @@ public class SimplexNoise
         if (t0 < 0)
         {
             n0 = 0.0;
-        } else
+        }
+        else
         {
             t0 *= t0;
             n0 = t0 * t0 * dot(grad4[gi0], x0, y0, z0, w0);
@@ -490,7 +518,8 @@ public class SimplexNoise
         if (t1 < 0)
         {
             n1 = 0.0;
-        } else
+        }
+        else
         {
             t1 *= t1;
             n1 = t1 * t1 * dot(grad4[gi1], x1, y1, z1, w1);
@@ -499,7 +528,8 @@ public class SimplexNoise
         if (t2 < 0)
         {
             n2 = 0.0;
-        } else
+        }
+        else
         {
             t2 *= t2;
             n2 = t2 * t2 * dot(grad4[gi2], x2, y2, z2, w2);
@@ -508,7 +538,8 @@ public class SimplexNoise
         if (t3 < 0)
         {
             n3 = 0.0;
-        } else
+        }
+        else
         {
             t3 *= t3;
             n3 = t3 * t3 * dot(grad4[gi3], x3, y3, z3, w3);
@@ -517,35 +548,14 @@ public class SimplexNoise
         if (t4 < 0)
         {
             n4 = 0.0;
-        } else
+        }
+        else
         {
             t4 *= t4;
             n4 = t4 * t4 * dot(grad4[gi4], x4, y4, z4, w4);
         }
         // Sum up and scale the result to cover the range [-1,1]
         return 27.0 * (n0 + n1 + n2 + n3 + n4);
-    }
-
-    // Inner class to speed upp gradient computations
-    // (array access is a lot slower than member access)
-    private static class Grad
-    {
-        double x, y, z, w;
-
-        Grad(final double x, final double y, final double z)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        Grad(final double x, final double y, final double z, final double w)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.w = w;
-        }
     }
 
     public static float[][] generateOctavedSimplexNoise(final int width, final int height, final int octaves,
@@ -583,5 +593,27 @@ public class SimplexNoise
         }
 
         return totalNoise;
+    }
+
+    // Inner class to speed upp gradient computations
+    // (array access is a lot slower than member access)
+    private static class Grad
+    {
+        double x, y, z, w;
+
+        Grad(final double x, final double y, final double z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        Grad(final double x, final double y, final double z, final double w)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
     }
 }

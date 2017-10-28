@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Fabio Ticconi
+ * Copyright (c) 2017 Fabio Ticconi
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -47,8 +47,10 @@ public class Main
                     // width, height, octaves, roughness,
                     // frequency);
 
-                    final String filename = String
-                            .format("images/octaves%d_roughness%.1f_frequency%.4f.png", octaves, roughness, frequency);
+                    final String filename = String.format("images/octaves%d_roughness%.1f_frequency%.4f.png",
+                                                          octaves,
+                                                          roughness,
+                                                          frequency);
                     image.savePng(filename, map);
                 }
             }

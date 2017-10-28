@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Fabio Ticconi
+ * Copyright (c) 2017 Fabio Ticconi
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -16,25 +16,21 @@
 
 package com.github.fabioticconi.terrain_generator;
 
-import java.awt.Color;
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
-import javax.imageio.ImageIO;
-
 /**
- *
  * @author Fabio Ticconi
  */
 public class ImageWriter
 {
+    final BufferedImage image;
     boolean grey;
-
     int width;
     int height;
-
-    final BufferedImage image;
 
     public ImageWriter(final int width, final int height, final boolean grey)
     {
@@ -71,7 +67,8 @@ public class ImageWriter
                 return new Color(0.2f, 0.5f, 0.9f);
             else
                 return new Color(0.4f, 0.7f, 1f);
-        } else
+        }
+        else
         {
             // final float val = t;
             // normalize val so 0 is at water level
@@ -156,7 +153,8 @@ public class ImageWriter
                         value = 0f;
                     }
                     col = new Color(value, value, value);
-                } else
+                }
+                else
                 {
                     col = getColor(value);
                 }
