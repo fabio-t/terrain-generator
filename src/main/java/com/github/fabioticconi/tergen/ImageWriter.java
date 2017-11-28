@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.github.fabioticconi.terrain_generator;
+package com.github.fabioticconi.tergen;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

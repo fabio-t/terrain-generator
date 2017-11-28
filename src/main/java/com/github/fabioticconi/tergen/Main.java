@@ -14,9 +14,9 @@
  * the License.
  */
 
-package com.github.fabioticconi.terrain_generator;
+package com.github.fabioticconi.tergen;
 
-import com.github.fabioticconi.terrain_generator.noise.SimplexNoise;
+import com.github.fabioticconi.tergen.noise.SimplexNoise;
 
 /**
  *
