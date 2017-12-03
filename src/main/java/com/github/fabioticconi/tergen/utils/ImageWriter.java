@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.github.fabioticconi.tergen;
+package com.github.fabioticconi.tergen.utils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -29,8 +29,8 @@ public class ImageWriter
 {
     final BufferedImage image;
     boolean grey;
-    int width;
-    int height;
+    int     width;
+    int     height;
 
     public ImageWriter(final int width, final int height, final boolean grey)
     {
@@ -44,10 +44,6 @@ public class ImageWriter
 
     Color getColor(float t)
     {
-        t = (1f + t) / 2f;
-        // t = 0.5f + t;
-        // t = Math.abs(t);
-
         if (t > 1f)
         {
             // System.out.println("error: " + value);
@@ -90,24 +86,26 @@ public class ImageWriter
         }
     }
 
-    Color getColor2(final float t)
+    Color getColor2(float t)
     {
-        if (t < -0.5f)
-            return new Color(0, 0, 128);
-        else if (t < -0.3f)
-            return new Color(0, 0, 255);
-        else if (t < -0.4f)
-            return new Color(0, 128, 255);
-        else if (t < 0f)
-            return new Color(240, 240, 64);
-        else if (t < 0.25f)
-            return new Color(32, 160, 0);
-        else if (t < 0.5f)
-            return new Color(224, 224, 0);
-        else if (t < 0.85f)
-            return new Color(128, 128, 128);
+        if (t < 0.01)
+            return new Color(51, 102, 153);
+        else if (t < 0.05f)
+            return new Color(20, 152, 204);
+        else if (t < 0.08f)
+            return new Color(76, 70, 50);
+        else if (t < 0.1f)
+            return new Color(119, 93, 61);
+        else if (t < 0.4f)
+            return new Color(31, 138, 19);
+        else if (t < 0.7f)
+            return new Color(74, 105, 4);
+        else if (t < 0.8f)
+            return new Color(170, 170, 0);
+        else if (t < 0.9f)
+            return new Color(184, 134, 11);
         else
-            return new Color(255, 255, 255);
+            return new Color(255, 240, 220);
     }
 
     public void savePng(final String filename, final float[][] map)
@@ -115,8 +113,6 @@ public class ImageWriter
         // this takes an array of float between -1 and 1 and generates a grey
         // scale image from them
 
-        float min = Float.MAX_VALUE;
-        float max = -Float.MAX_VALUE;
         float value;
         for (int y = 0; y < height; y++)
         {
@@ -124,24 +120,10 @@ public class ImageWriter
             {
                 value = map[x][y];
 
-                if (value < min)
-                {
-                    min = value;
-                }
-
-                if (value > max)
-                {
-                    max = value;
-                }
-
                 Color col;
 
                 if (grey)
                 {
-                    value = (1f + value) / 2f;
-                    // value = 0.5f + value;
-                    // value = Math.abs(value);
-
                     if (value > 1f)
                     {
                         System.out.println("error: " + value);
@@ -156,7 +138,7 @@ public class ImageWriter
                 }
                 else
                 {
-                    col = getColor(value);
+                    col = getColor2(value);
                 }
 
                 image.setRGB(x, y, col.getRGB());
