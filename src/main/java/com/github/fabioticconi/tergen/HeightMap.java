@@ -16,7 +16,10 @@
 
 package com.github.fabioticconi.tergen;
 
+import com.github.fabioticconi.tergen.noise.OpenSimplexNoise;
 import com.github.fabioticconi.tergen.noise.SimplexNoise;
+
+import java.util.Random;
 
 /**
  * Author: Fabio Ticconi
@@ -40,6 +43,8 @@ public class HeightMap
     private float lowerBound;
     private float higherBound;
 
+    private Random rand;
+
     public HeightMap()
     {
         this.width = 100;
@@ -52,6 +57,8 @@ public class HeightMap
         this.roughness = 0.5f;
 
         this.bounds = false;
+
+        this.rand = new Random();
     }
 
     public HeightMap size(final int width, final int height)
@@ -100,11 +107,19 @@ public class HeightMap
         return this;
     }
 
+    public HeightMap randomSeed(final int seed)
+    {
+        this.rand = new Random(seed);
+
+        return this;
+    }
+
     public float[][] build()
     {
         final float[][] heightmap;
 
-        heightmap = SimplexNoise.generateOctavedSimplexNoise(width, height, octaves, roughness, frequency, amplitude, lacunarity);
+        // heightmap = SimplexNoise.generateOctavedSimplexNoise(width, height, octaves, roughness, frequency, amplitude, lacunarity);
+        heightmap = OpenSimplexNoise.generateOctavedSimplexNoise(new OpenSimplexNoise(5), width, height, octaves, roughness, frequency, amplitude, lacunarity);
 
         // if (bounds)
         // {
@@ -121,8 +136,8 @@ public class HeightMap
         {
             for (int y = 0; y < height; y++)
             {
-                // heightmap[x][y] = Math.abs(heightmap[x][y]);
-                heightmap[x][y] = 0.5f*(heightmap[x][y] + 1f);
+                heightmap[x][y] = Math.abs(heightmap[x][y]);
+                // heightmap[x][y] = 0.5f*(heightmap[x][y] + 1f);
             }
         }
 
@@ -153,4 +168,3 @@ public class HeightMap
         return heightmap;
     }
 }
-

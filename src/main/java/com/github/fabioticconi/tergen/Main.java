@@ -27,8 +27,8 @@ public class Main
     {
         float map[][];
 
-        final int width  = 100;
-        final int height = 100;
+        final int width  = 1000;
+        final int height = 1000;
 
         // final OpenSimplexNoise noise = new OpenSimplexNoise();
 
@@ -58,9 +58,9 @@ public class Main
 
         final HeightMap heightMap = new HeightMap()
                                         .size(width, height)
-                                        // .island(0.8f)
+                                        .island(0.8f)
                                         // .bounds(-0.25f, 1f)
-                                        .noise(16, 0.5f, 0.01f, 1f, 2f);
+                                        .noise(16, 0.5f, 0.003f, 1f, 2f);
 
         image.savePng("map.png", heightMap.build());
     }
