@@ -176,7 +176,7 @@ public class OpenSimplexNoise
                 // totalNoise[x][y] /= weightSum;
 
                 totalNoise[x][y] = (((totalNoise[x][y] - minV) * 2f) / (maxV - minV)) -1f;
-                System.out.println(totalNoise[x][y]);
+                // System.out.println(totalNoise[x][y]);
             }
         }
 

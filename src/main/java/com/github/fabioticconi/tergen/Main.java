@@ -25,10 +25,8 @@ public class Main
 {
     public static void main(final String[] args)
     {
-        float map[][];
-
-        final int width  = 1000;
-        final int height = 1000;
+        final int width  = 500;
+        final int height = 500;
 
         // final OpenSimplexNoise noise = new OpenSimplexNoise();
 
@@ -42,7 +40,7 @@ public class Main
         //         for (float frequency = 0.005f; frequency < 0.01f; frequency = frequency + 0.001f)
         //         // final float frequency = 0.007f;
         //         {
-        //             map = SimplexNoise.generateOctavedSimplexNoise(width, height, octaves, roughness, frequency);
+        //             float map[][] = SimplexNoise.generateOctavedSimplexNoise(width, height, octaves, roughness, frequency);
         //             // map = OpenSimplexNoise.generateOctavedSimplexNoise(noise,
         //             // width, height, octaves, roughness,
         //             // frequency);
@@ -57,10 +55,9 @@ public class Main
         // }
 
         final HeightMap heightMap = new HeightMap()
-                                        .size(width, height)
+                                        .size(width, height, 5)
                                         .island(0.8f)
-                                        // .bounds(-0.25f, 1f)
-                                        .noise(16, 0.5f, 0.003f, 1f, 2f);
+                                        .noise(16, 0.5f, 3f/Math.max(width, height), 1f);
 
         image.savePng("map.png", heightMap.build());
     }

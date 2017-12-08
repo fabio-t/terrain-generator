@@ -93,17 +93,17 @@ public class ImageWriter
         else if (t < 0.05f)
             return new Color(20, 152, 204);
         else if (t < 0.08f)
-            return new Color(76, 70, 50);
+            return new Color(184, 134, 11);
         else if (t < 0.1f)
-            return new Color(119, 93, 61);
+            return new Color(170, 170, 0);
         else if (t < 0.4f)
             return new Color(31, 138, 19);
         else if (t < 0.7f)
             return new Color(74, 105, 4);
         else if (t < 0.8f)
-            return new Color(170, 170, 0);
+            return new Color(119, 93, 61);
         else if (t < 0.9f)
-            return new Color(184, 134, 11);
+            return new Color(76, 70, 50);
         else
             return new Color(255, 240, 220);
     }
