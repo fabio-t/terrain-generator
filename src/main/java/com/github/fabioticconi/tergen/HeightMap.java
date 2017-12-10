@@ -16,11 +16,6 @@
 
 package com.github.fabioticconi.tergen;
 
-import com.github.fabioticconi.tergen.noise.OpenSimplexNoise;
-import com.github.fabioticconi.tergen.noise.SimplexNoise;
-
-import java.util.Random;
-
 /**
  * Author: Fabio Ticconi
  * Date: 03/12/17

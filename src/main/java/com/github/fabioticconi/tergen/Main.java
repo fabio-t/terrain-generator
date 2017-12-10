@@ -25,8 +25,8 @@ public class Main
 {
     public static void main(final String[] args)
     {
-        final int width  = 500;
-        final int height = 500;
+        final int width  = 1024;
+        final int height = 1024;
 
         // final OpenSimplexNoise noise = new OpenSimplexNoise();
 
