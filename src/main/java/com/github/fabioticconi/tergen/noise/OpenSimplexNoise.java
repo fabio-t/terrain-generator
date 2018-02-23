@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Fabio Ticconi
+ * Copyright (c) 2015-2018 Fabio Ticconi
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -14,7 +14,7 @@
  * the License.
  */
 
-package com.github.fabioticconi.tergen;
+package com.github.fabioticconi.tergen.noise;
 
 /*
  * OpenSimplex Noise in Java. by Kurt Spencer
@@ -130,57 +130,6 @@ public class OpenSimplexNoise
     {
         final int xi = (int) x;
         return x < xi ? xi - 1 : xi;
-    }
-
-    public static float[][] generateOctavedSimplexNoise(final OpenSimplexNoise noise, final int width, final int height, final int octaves,
-                                                        final float roughness, float frequency, final float amplitude, final float lacunarity)
-    {
-        final float[][] totalNoise = new float[width][height];
-
-        float tempAmplitude = amplitude;
-        float weightSum = 0f;
-
-        float maxV = Float.MIN_VALUE;
-        float minV = Float.MAX_VALUE;
-
-        for (int octave = 0; octave < octaves; octave++)
-        {
-            // Calculate single layer/octave of simplex noise, then add it to
-            // total noise
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    totalNoise[x][y] += (float) noise.eval(x * frequency, y * frequency) * tempAmplitude;
-
-                    if (octave == octaves - 1)
-                    {
-                        if (totalNoise[x][y] > maxV)
-                            maxV = totalNoise[x][y];
-                        else if (totalNoise[x][y] < minV)
-                            minV = totalNoise[x][y];
-                    }
-                }
-            }
-
-            // Increase variables with each incrementing octave
-            frequency *= lacunarity;
-            weightSum += tempAmplitude;
-            tempAmplitude *= roughness;
-        }
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                // totalNoise[x][y] /= weightSum;
-
-                totalNoise[x][y] = (((totalNoise[x][y] - minV) * 2f) / (maxV - minV)) -1f;
-                // System.out.println(totalNoise[x][y]);
-            }
-        }
-
-        return totalNoise;
     }
 
     // 2D OpenSimplex Noise.

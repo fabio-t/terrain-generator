@@ -16,6 +16,11 @@
 
 package com.github.fabioticconi.tergen;
 
+import com.github.fabioticconi.tergen.noise.FractalNoise;
+
+import java.util.ArrayList;
+import java.util.Random;
+
 /**
  * Author: Fabio Ticconi
  * Date: 03/12/17
@@ -24,66 +29,34 @@ public class HeightMap
 {
     private int width;
     private int height;
-    private int seed;
 
-    private boolean islandShape;
     private float   islandFraction;
 
-    private int   octaves;
-    private float frequency;
-    private float roughness;
-    private float amplitude;
-    private float lacunarity;
+    private float riverThreshold;
+    private float riverFraction;
+
+    final public FractalNoise fractalNoise;
 
     public HeightMap()
     {
         this.width = 100;
         this.height = 100;
-        this.seed = 5;
 
-        this.islandShape = false;
+        this.islandFraction = 0.5f;
 
-        this.octaves = 7;
-        this.frequency = 0.007f;
-        this.roughness = 0.5f;
+        this.riverThreshold = 0f;
+        this.riverFraction = 0f;
+
+        this.fractalNoise = new FractalNoise();
     }
 
-    public HeightMap size(final int width, final int height, final int seed)
+    public HeightMap size(final int width, final int height)
     {
         if (width < 0 || height < 0)
             throw new IllegalArgumentException("width and height must be positive");
 
         this.width = width;
         this.height = height;
-        this.seed = seed;
-
-        return this;
-    }
-
-    public HeightMap noise(final int octaves, final float roughness, final float frequency, final float amplitude)
-    {
-        if (octaves <= 0 || roughness <= 0f || frequency <= 0f || amplitude <= 0f)
-            throw new IllegalArgumentException("all parameters must be positive");
-
-        this.octaves = octaves;
-        this.roughness = roughness;
-        this.frequency = frequency;
-        this.amplitude = amplitude;
-        this.lacunarity = 1f / roughness;
-
-        return this;
-    }
-
-    public HeightMap noise(final int octaves, final float roughness, final float frequency, final float amplitude, final float lacunarity)
-    {
-        if (octaves <= 0 || roughness <= 0f || frequency <= 0f || amplitude <= 0f || lacunarity <= 0f)
-            throw new IllegalArgumentException("all parameters must be positive");
-
-        this.octaves = octaves;
-        this.roughness = roughness;
-        this.frequency = frequency;
-        this.amplitude = amplitude;
-        this.lacunarity = lacunarity;
 
         return this;
     }
@@ -93,8 +66,21 @@ public class HeightMap
         if (islandFraction <= 0f || islandFraction >= 1f)
             throw new IllegalArgumentException("island fraction must be in range (0,1), not included");
 
-        this.islandShape = true;
         this.islandFraction = islandFraction;
+
+        return this;
+    }
+
+    public HeightMap rivers(final float riverThreshold, final float riverFraction)
+    {
+        if (riverThreshold < 0f || riverThreshold >= 1f)
+            throw new IllegalArgumentException("river threshold must be in range [0,1)");
+
+        if (riverFraction <= 0f || riverFraction > 1f)
+            throw new IllegalArgumentException("river threshold must be in range (0,1]");
+
+        this.riverThreshold = riverThreshold;
+        this.riverFraction = riverFraction;
 
         return this;
     }
@@ -103,8 +89,7 @@ public class HeightMap
     {
         final float[][] heightmap;
 
-        heightmap = OpenSimplexNoise.generateOctavedSimplexNoise(
-            new OpenSimplexNoise(seed), width, height, octaves, roughness, frequency, amplitude, lacunarity);
+        heightmap = fractalNoise.build(width, height);
 
         for (int x = 0; x < width; x++)
         {
@@ -118,10 +103,13 @@ public class HeightMap
             }
         }
 
-        if (islandShape)
+        if (islandFraction > 0f)
         {
-            final float[][] heightMod = OpenSimplexNoise.generateOctavedSimplexNoise(
-                new OpenSimplexNoise(seed+10), width, height, octaves, roughness, frequency, amplitude, lacunarity);
+            // we make a new "noise map" that we will use to make noisy coasts of this island
+            final int seed = fractalNoise.getSeed();
+            fractalNoise.seed(seed < Integer.MAX_VALUE ? seed+1 : seed-1);
+            final float[][] heightMod = fractalNoise.build(width, height);
+            fractalNoise.seed(seed); // must put it back
 
             final float islandSizeX = width * islandFraction;
             final float islandSizeY = height * islandFraction;
@@ -145,6 +133,27 @@ public class HeightMap
                     final double gradient = Math.pow(delta, 3) + Math.abs(heightMod[x][y]);
 
                     heightmap[x][y] = (float) Math.max(0.0, heightmap[x][y] * (1d-gradient));
+                }
+            }
+        }
+
+        if (riverFraction > 0f)
+        {
+            // let's make some rivers
+
+            // simple approach: we go through the whole map, and every cell with height > riverThreshold
+            // gets a chance (equal to riverFraction) of becoming the source of a river.
+
+            final Random r = new Random();
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (heightmap[x][y] > riverThreshold && r.nextFloat() < riverFraction)
+                    {
+
+                    }
                 }
             }
         }
