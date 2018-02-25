@@ -1,7 +1,13 @@
 # Terrain generator
 
-Crappy noise-based terrain/heightmap generator I'm using for a roguelike. For now it just provides a decently configurablec
-Simplex noise class and a class to write an array of floats to a coloured image.
+[![Latest Github release](https://img.shields.io/github/release/fabio-t/terrain-generator.svg)](https://github.com/fabio-t/terrain-generator/releases/latest)
 
-When I have time, I should also explore here the integration of the heightmap with weather, humidity, temperature
-and the biomes that they, together, generate.
+Minimal terrain generator based on OpenSimplexNoise. It supports island shapes, allows river creation and
+makes it simple to configure the octaved (or "fractal") noise generation for heightmaps, moisture and so on.
+
+It ships with a complete example (just run the Main and inspect the images generated, then play around with parameters).
+
+When and if it will become more complex, I'll write better documentation. Right now, you are going to play around
+with the parameters yourself.
+
+Feel free to write an Issue if you have questions or need help.

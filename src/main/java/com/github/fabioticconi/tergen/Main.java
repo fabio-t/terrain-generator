@@ -28,37 +28,23 @@ public class Main
         final int width  = 1024;
         final int height = 1024;
 
-        // final OpenSimplexNoise noise = new OpenSimplexNoise();
-
         final ImageWriter image = new ImageWriter(width, height, false);
 
-        // for (int octaves = 2; octaves < 9; octaves++)
-        // {
-        //     for (float roughness = 0.1f; roughness <= 1f; roughness = roughness + 0.1f)
-        //     // final float roughness = 0.5f;
-        //     {
-        //         for (float frequency = 0.005f; frequency < 0.01f; frequency = frequency + 0.001f)
-        //         // final float frequency = 0.007f;
-        //         {
-        //             float map[][] = SimplexNoise.generateOctavedSimplexNoise(width, height, octaves, roughness, frequency);
-        //             // map = OpenSimplexNoise.generateOctavedSimplexNoise(noise,
-        //             // width, height, octaves, roughness,
-        //             // frequency);
-        //
-        //             final String filename = String.format("images/octaves%d_roughness%.1f_frequency%.4f.png",
-        //                                                   octaves,
-        //                                                   roughness,
-        //                                                   frequency);
-        //             image.savePng(filename, map);
-        //         }
-        //     }
-        // }
-
         final HeightMap heightMap = new HeightMap()
-                                        .size(width, height, 5)
+                                        .size(width, height)
                                         .island(0.8f)
-                                        .noise(16, 0.5f, 3f/Math.max(width, height), 1f);
+                                        .rivers(0.8f, 0.03f, 0.001f);
 
-        image.savePng("map.png", heightMap.build());
+        heightMap.fractalNoise
+            .set(16, 0.5f, 3f / Math.max(width, height), 1f);
+
+        for (int seed = 0; seed < 10; seed++)
+        {
+            System.out.println("seed: " + seed);
+
+            heightMap.fractalNoise.seed(seed);
+
+            image.savePng("map" + seed + ".png", heightMap.build());
+        }
     }
 }
