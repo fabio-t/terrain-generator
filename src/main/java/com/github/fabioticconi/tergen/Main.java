@@ -32,12 +32,19 @@ public class Main
 
         final HeightMap heightMap = new HeightMap()
                                         .size(width, height)
-                                        .island(0.8f);
+                                        .island(0.8f)
+                                        .rivers(0.8f, 0.03f, 0.001f);
 
         heightMap.fractalNoise
-            .seed(5)
             .set(16, 0.5f, 3f / Math.max(width, height), 1f);
 
-        image.savePng("map.png", heightMap.build());
+        for (int seed = 0; seed < 10; seed++)
+        {
+            System.out.println("seed: " + seed);
+
+            heightMap.fractalNoise.seed(seed);
+
+            image.savePng("map" + seed + ".png", heightMap.build());
+        }
     }
 }

@@ -86,7 +86,7 @@ public class ImageWriter
         }
     }
 
-    Color getColor2(float t)
+    Color getColor2(final float t)
     {
         if (t < 0.01)
             return new Color(51, 102, 153);
@@ -120,7 +120,7 @@ public class ImageWriter
             {
                 value = map[x][y];
 
-                Color col;
+                final Color col;
 
                 if (grey)
                 {
