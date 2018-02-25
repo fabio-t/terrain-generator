@@ -11,3 +11,27 @@ When and if it will become more complex, I'll write better documentation. Right 
 with the parameters yourself.
 
 Feel free to write an Issue if you have questions or need help.
+
+## Install
+
+1. First add Jitpack as a repository inside your pom.xml
+
+```xml
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+```
+
+2. Then add `rlforj-alt` as a dependency (make sure to change `version` to one of the
+[releases](https://github.com/fabio-t/rlforj-alt/releases)):
+
+```xml
+<dependency>
+    <groupId>com.github.fabio-t</groupId>
+    <artifactId>terrain-generator</artifactId>
+    <version>version</version>
+</dependency>
+```
