@@ -35,6 +35,7 @@ public class HeightMap
     private float sourceThreshold;
     private float riverThreshold;
     private float riverFraction;
+    private int maxSameDirection;
 
     final public FractalNoise fractalNoise;
 
@@ -48,6 +49,7 @@ public class HeightMap
         this.sourceThreshold = 0f;
         this.riverThreshold = 0f;
         this.riverFraction = 0f;
+        this.maxSameDirection = 0;
 
         this.fractalNoise = new FractalNoise();
     }
@@ -73,7 +75,7 @@ public class HeightMap
         return this;
     }
 
-    public HeightMap rivers(final float sourceThreshold, final float riverThreshold, final float riverFraction)
+    public HeightMap rivers(final float sourceThreshold, final float riverThreshold, final float riverFraction, final int maxSameDirection)
     {
         if (sourceThreshold <= 0f || sourceThreshold > 1f)
             throw new IllegalArgumentException("source threshold must be in range (0,1]");
@@ -87,9 +89,13 @@ public class HeightMap
         if (riverFraction <= 0f || riverFraction > 1f)
             throw new IllegalArgumentException("river fraction must be in range (0,1]");
 
+        if (maxSameDirection < 0)
+            throw new IllegalArgumentException("max same direction must be a non-negative integer");
+
         this.sourceThreshold = sourceThreshold;
         this.riverThreshold = riverThreshold;
         this.riverFraction = riverFraction;
+        this.maxSameDirection = maxSameDirection;
 
         return this;
     }
@@ -161,7 +167,7 @@ public class HeightMap
                 {
                     if (heightmap[x][y] >= sourceThreshold && r.nextFloat() < riverFraction)
                     {
-                        makeRiver(heightmap, x, y, -1);
+                        makeRiver(heightmap, x, y, -1, 0, -1);
 
                         // return heightmap; // FIXME remove this later
                     }
@@ -172,7 +178,7 @@ public class HeightMap
         return heightmap;
     }
 
-    private void makeRiver(final float heightmap[][], final int x, final int y, final int skipNeighbour)
+    private void makeRiver(final float heightmap[][], final int x, final int y, final int skipNeighbour, final int same, final int prev)
     {
         // the "source" cannot be lower than the "river depth"
         if (heightmap[x][y] <= riverThreshold)
@@ -201,9 +207,9 @@ public class HeightMap
 
             final int y1 = y + z;
 
-            if (y1 < height && neighbour != skipNeighbour)
+            if (y1 < height && neighbour != skipNeighbour && (same <= maxSameDirection || prev != neighbour))
             {
-                System.out.println(x_t + " " + y1 + " " + heightmap[x_t][y1]);
+                // System.out.println(x_t + " " + y1 + " " + heightmap[x_t][y1]);
 
                 if (heightmap[x_t][y1] > riverThreshold && heightmap[x_t][y1] < minHeight)
                 {
@@ -223,11 +229,12 @@ public class HeightMap
                 continue;
             }
 
-            System.out.println(x_t + " " + y2 + " " + heightmap[x_t][y2]);
+            // System.out.println(x_t + " " + y2 + " " + heightmap[x_t][y2]);
 
             if (neighbour != skipNeighbour &&
                 heightmap[x_t][y2] > riverThreshold &&
-                heightmap[x_t][y2] < minHeight)
+                heightmap[x_t][y2] < minHeight &&
+                (same <= maxSameDirection || prev != neighbour))
             {
                 newX = x_t;
                 newY = y2;
@@ -240,8 +247,10 @@ public class HeightMap
 
         // System.out.println("chosen: " + newX + " " + newY + " " + minHeight + ", #" + chosen);
 
+        final int sameChosen = chosen == prev ? same + 1 : 0;
+
         // we continue recursively
         if (newX >= 0)
-            makeRiver(heightmap, newX, newY, chosen >= 0 ? 3-chosen : chosen);
+            makeRiver(heightmap, newX, newY, skipNeighbour < 0 && chosen >= 0 ? 3-chosen : skipNeighbour, sameChosen, chosen);
     }
 }
