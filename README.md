@@ -25,7 +25,7 @@ Feel free to write an Issue if you have questions or need help.
 </repositories>
 ```
 
-2. Then add `rlforj-alt` as a dependency (make sure to change `version` to one of the
+2. Then add `terrain-generator` as a dependency (make sure to change `version` to one of the
 [releases](https://github.com/fabio-t/terrain-generator/releases)):
 
 ```xml
