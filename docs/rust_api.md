@@ -14,11 +14,15 @@ From a git dependency:
 terrain-generator = { git = "https://github.com/fabio-t/terrain-generator", default-features = false }
 ```
 
-The crate has one feature:
+Features:
 
 | Feature | Default | Effect |
 |---------|---------|--------|
-| `cli`   | on      | Builds the `terrain-generator` binary and pulls in `clap`. Library consumers should disable it (`default-features = false`) to skip the `clap` dependency. |
+| `png`   | on (via `cli`) | PNG output (`Terrain::save_png`, `RenderError`); pulls in the `png` crate. `Terrain::to_rgb` works without it. |
+| `cli`   | on      | Builds the `terrain-generator` binary; pulls in `clap` and implies `png`. |
+
+With `default-features = false` the library has a single dependency
+(`noise`) — add `features = ["png"]` back if you want PNG files.
 
 ## Quick start
 
@@ -34,10 +38,13 @@ let terrain = Terrain::builder()
 terrain.save_png("map.png", RenderStyle::Shaded)?;
 
 // or consume the raw data
-let elevation = terrain.height_at(100, 100);   // f32 in [0, 1]
+let elevation = terrain.heightmap[(100, 100)]; // f32 in [0, 1]
 let moisture  = terrain.flow_at(100, 100);     // f32 in [0, 1]
 let has_river = terrain.is_river(100, 100);
 let has_lake  = terrain.is_lake(100, 100);
+
+// zero-copy access to the flat row-major buffer, e.g. for a GPU upload:
+let raw: &[f32] = terrain.heightmap.as_slice();
 ```
 
 ## Pipeline
@@ -58,7 +65,10 @@ default and can be disabled individually.
    Filled depressions deeper than a small epsilon become lakes.
 
 Generation is **fully deterministic**: the same seed and parameters always
-produce the same terrain, on every platform.
+produce the same terrain, on every platform. One caveat: the base noise
+comes from the `noise` crate, so upgrading that dependency across breaking
+versions may change the generated terrain — pin versions (commit
+`Cargo.lock`) if you rely on stable worlds.
 
 ## Types
 
@@ -70,14 +80,21 @@ different seeds via `.seed(n)`).
 
 | Method | Default | Description |
 |--------|---------|-------------|
-| `.size(width, height)` | `512 × 512` | Map dimensions in cells. Panics if either is `0`. |
+| `.size(width, height)` | `512 × 512` | Map dimensions in cells. |
 | `.seed(u32)` | `0` | Generation seed. |
-| `.sea_level(f32)` | `0.08` | Sea level in `[0, 1)`. Panics outside that range. |
+| `.sea_level(f32)` | `0.08` | Sea level in `[0, 1)`. |
 | `.noise(NoiseParams)` | see below | Fractal noise parameters. |
 | `.island(IslandParams)` / `.no_island()` | enabled | Island shaping. |
 | `.erosion(ErosionParams)` / `.no_erosion()` | enabled | Hydraulic erosion. |
 | `.rivers(RiverParams)` / `.no_rivers()` | enabled | Flow routing, rivers and lakes. |
-| `.generate()` | — | Runs the pipeline, returns a `Terrain`. |
+| `.generate()` | — | Validates all parameters, runs the pipeline, returns a `Terrain`. |
+
+All validation happens in `generate()`, which **panics with a descriptive
+message** on out-of-range parameters (zero dimensions, sea level outside
+`[0, 1)`, non-positive noise values, erosion rates outside their unit
+ranges, river density outside `[0, 1]`). Out-of-range configuration is
+treated as a programmer error; validate untrusted input before passing it
+in — the Elixir bindings do exactly that on their side of the boundary.
 
 ### `NoiseParams`
 
@@ -119,21 +136,27 @@ The defaults work well for maps between 256² and 2048²; usually only
 |-------|---------|-------------|
 | `density: f32` | `0.01` | Approximate fraction of land cells covered by rivers. |
 
-### `Terrain`
+### `Grid<T>`
 
-All buffers are row-major `Vec`s indexed as `y * width + x`.
+Every per-cell buffer is a `Grid<T>`: a dense, row-major 2D grid indexed
+as `grid[(x, y)]`. Key methods: `width()`, `height()`, `len()`,
+`as_slice()` / `as_mut_slice()` (the flat row-major buffer, for zero-copy
+FFI or GPU hand-off), `into_vec()`, `iter()`, and `idx(x, y)` /
+`coords(idx)` for converting between coordinates and flat indices.
+
+### `Terrain`
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `width`, `height` | `usize` | Map dimensions. |
 | `sea_level` | `f32` | The sea level the terrain was generated with. |
-| `heightmap` | `Vec<f32>` | Elevation per cell, in `[0, 1]`. |
-| `flow` | `Vec<f32>` | Log-normalised flow accumulation in `[0, 1]`; a useful moisture proxy for biome placement. |
-| `rivers` | `Vec<u8>` | `1` where a river runs. Rivers are continuous from source to sea (or to a lake). |
-| `lakes` | `Vec<u8>` | `1` where an inland depression holds standing water. |
+| `heightmap` | `Grid<f32>` | Elevation per cell, in `[0, 1]`. |
+| `flow` | `Grid<f32>` | Log-normalised flow accumulation in `[0, 1]`; a useful moisture proxy for biome placement. |
+| `rivers` | `Grid<u8>` | `1` where a river runs. Rivers are continuous from source to sea (or to a lake). |
+| `lakes` | `Grid<u8>` | `1` where an inland depression holds standing water. |
 
-Convenience accessors: `height_at(x, y)`, `flow_at(x, y)`,
-`is_river(x, y)`, `is_lake(x, y)`, `is_water(x, y)` (sea, lake or river).
+Convenience accessors: `width()`, `height()`, `height_at(x, y)`,
+`flow_at(x, y)`, `is_river(x, y)`, `is_lake(x, y)`, `is_water(x, y)`
+(sea, lake or river).
 
 ### Rendering
 
@@ -141,8 +164,8 @@ Convenience accessors: `height_at(x, y)`, `flow_at(x, y)`,
 |------|-------------|
 | `RenderStyle::Shaded` | Biome colours (ocean depth, beach, grass, forest, rock, snow) with Lambertian hillshading; rivers and lakes in blue. |
 | `RenderStyle::Greyscale` | Plain heightmap, black = 0 to white = 1. |
-| `Terrain::to_rgb(style) -> Vec<u8>` | Row-major `width * height * 3` RGB buffer — feed it to any image or texture API. |
-| `Terrain::save_png(path, style) -> Result<(), RenderError>` | Renders and writes a PNG. |
+| `Terrain::to_rgb(style) -> Vec<u8>` | Row-major `width * height * 3` RGB buffer — feed it to any image or texture API. Always available. |
+| `Terrain::save_png(path, style) -> Result<(), RenderError>` | Renders and writes a PNG. Requires the `png` feature. |
 
 `RenderError` wraps the underlying I/O or PNG encoding error and
 implements `std::error::Error`.

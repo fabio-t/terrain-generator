@@ -107,12 +107,12 @@ fn generate<'a>(
     Ok((
         atom::ok(),
         (
-            terrain.width as u64,
-            terrain.height as u64,
-            f32_binary(env, &terrain.heightmap),
-            f32_binary(env, &terrain.flow),
-            u8_binary(env, &terrain.rivers),
-            u8_binary(env, &terrain.lakes),
+            terrain.width() as u64,
+            terrain.height() as u64,
+            f32_binary(env, terrain.heightmap.as_slice()),
+            f32_binary(env, terrain.flow.as_slice()),
+            u8_binary(env, terrain.rivers.as_slice()),
+            u8_binary(env, terrain.lakes.as_slice()),
         ),
     ))
 }

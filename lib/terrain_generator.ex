@@ -36,13 +36,17 @@ defmodule TerrainGenerator do
     * `:lacunarity` — frequency multiplier between octaves (default `2.0`)
     * `:persistence` — amplitude multiplier between octaves (default `0.5`)
     * `:island` — island diameter as a fraction of the shorter map
-      dimension, or `false` to let terrain reach the borders
-      (default `0.9`)
+      dimension, `true` for the default size, or `false` to let terrain
+      reach the borders (default `0.9`)
     * `:coast_noise` — coastline perturbation strength (default `0.35`)
     * `:erosion` — `true`/`false`, or a droplet count to override the
       default of one droplet per cell (default `true`)
-    * `:rivers` — approximate fraction of land covered by rivers, or
-      `false` to disable rivers and lakes (default `0.01`)
+    * `:rivers` — approximate fraction of land covered by rivers, `true`
+      for the default density, or `false` to disable rivers and lakes
+      (default `0.01`)
+
+  All options are validated; invalid values raise `ArgumentError` with a
+  descriptive message before any native code runs.
   """
 
   alias TerrainGenerator.{Native, Terrain}
@@ -71,10 +75,10 @@ defmodule TerrainGenerator do
           | {:frequency, number()}
           | {:lacunarity, number()}
           | {:persistence, number()}
-          | {:island, number() | false}
+          | {:island, number() | boolean()}
           | {:coast_noise, number()}
           | {:erosion, boolean() | pos_integer()}
-          | {:rivers, number() | false}
+          | {:rivers, number() | boolean()}
 
   @doc """
   Generates a terrain and returns `{:ok, %TerrainGenerator.Terrain{}}`.
@@ -134,26 +138,68 @@ defmodule TerrainGenerator do
     merged = Map.merge(@defaults, opts)
 
     %{
-      width: merged.width,
-      height: merged.height,
-      seed: merged.seed,
-      sea_level: to_float(merged.sea_level),
-      octaves: merged.octaves,
-      frequency: to_float(merged.frequency),
-      lacunarity: to_float(merged.lacunarity),
-      persistence: to_float(merged.persistence),
-      island: if(merged.island == false, do: 0.0, else: to_float(merged.island)),
-      coast_noise: to_float(merged.coast_noise),
-      droplets:
-        case merged.erosion do
-          true -> -1
-          false -> 0
-          n when is_integer(n) and n > 0 -> n
-        end,
-      rivers: if(merged.rivers == false, do: 0.0, else: to_float(merged.rivers))
+      width: validate_pos_int(:width, merged.width),
+      height: validate_pos_int(:height, merged.height),
+      seed: validate_non_neg_int(:seed, merged.seed),
+      sea_level: validate_number(:sea_level, merged.sea_level, 0.0, 1.0),
+      octaves: validate_pos_int(:octaves, merged.octaves),
+      frequency: validate_pos_number(:frequency, merged.frequency),
+      lacunarity: validate_pos_number(:lacunarity, merged.lacunarity),
+      persistence: validate_pos_number(:persistence, merged.persistence),
+      island: validate_island(merged.island),
+      coast_noise: validate_number(:coast_noise, merged.coast_noise, 0.0, 100.0),
+      droplets: validate_erosion(merged.erosion),
+      rivers: validate_rivers(merged.rivers)
     }
   end
 
-  defp to_float(v) when is_integer(v), do: v * 1.0
-  defp to_float(v) when is_float(v), do: v
+  defp validate_pos_int(_key, v) when is_integer(v) and v > 0, do: v
+
+  defp validate_pos_int(key, v),
+    do: raise(ArgumentError, "#{key} must be a positive integer, got: #{inspect(v)}")
+
+  defp validate_non_neg_int(_key, v) when is_integer(v) and v >= 0, do: v
+
+  defp validate_non_neg_int(key, v),
+    do: raise(ArgumentError, "#{key} must be a non-negative integer, got: #{inspect(v)}")
+
+  defp validate_pos_number(_key, v) when is_number(v) and v > 0, do: v * 1.0
+
+  defp validate_pos_number(key, v),
+    do: raise(ArgumentError, "#{key} must be a positive number, got: #{inspect(v)}")
+
+  defp validate_number(_key, v, min, max) when is_number(v) and v >= min and v < max,
+    do: v * 1.0
+
+  defp validate_number(key, v, min, max),
+    do: raise(ArgumentError, "#{key} must be a number in [#{min}, #{max}), got: #{inspect(v)}")
+
+  defp validate_island(false), do: 0.0
+  defp validate_island(true), do: @defaults.island
+  defp validate_island(v) when is_number(v) and v > 0, do: v * 1.0
+
+  defp validate_island(v),
+    do: raise(ArgumentError, "island must be a positive number or false, got: #{inspect(v)}")
+
+  defp validate_erosion(true), do: -1
+  defp validate_erosion(false), do: 0
+  defp validate_erosion(n) when is_integer(n) and n > 0, do: n
+
+  defp validate_erosion(v),
+    do:
+      raise(
+        ArgumentError,
+        "erosion must be a boolean or a positive droplet count, got: #{inspect(v)}"
+      )
+
+  defp validate_rivers(false), do: 0.0
+  defp validate_rivers(true), do: @defaults.rivers
+  defp validate_rivers(v) when is_number(v) and v >= 0 and v <= 1, do: v * 1.0
+
+  defp validate_rivers(v),
+    do:
+      raise(
+        ArgumentError,
+        "rivers must be a number in [0, 1] or false, got: #{inspect(v)}"
+      )
 end

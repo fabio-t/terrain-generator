@@ -13,4 +13,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.36"
-terrain-generator = { path = "../..", default-features = false }
+terrain-generator = { path = "../..", default-features = false, features = ["png"] }

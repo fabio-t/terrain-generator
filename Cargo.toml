@@ -5,19 +5,31 @@ members = [".", "native/terrain_generator_nif"]
 name = "terrain-generator"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0"
 authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
 description = "Procedural terrain generator: fractal noise, hydraulic erosion and river extraction"
 repository = "https://github.com/fabio-t/terrain-generator"
+keywords = ["terrain", "procedural", "heightmap", "erosion", "noise"]
+categories = ["game-development", "simulation"]
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
 
 [dependencies]
 noise = "0.9"
-png = "0.17"
+png = { version = "0.17", optional = true }
 clap = { version = "4", features = ["derive"], optional = true }
 
 [features]
 default = ["cli"]
-cli = ["dep:clap"]
+# PNG file output (Terrain::save_png); to_rgb works without it.
+png = ["dep:png"]
+# The terrain-generator command-line binary.
+cli = ["dep:clap", "png"]
 
 [[bin]]
 name = "terrain-generator"

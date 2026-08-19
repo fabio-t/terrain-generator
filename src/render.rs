@@ -1,8 +1,7 @@
 //! Rendering of generated terrain to RGB buffers and PNG files.
-
-use std::fs::File;
-use std::io::BufWriter;
-use std::path::Path;
+//!
+//! [`to_rgb`] has no dependencies and is always available; [`save_png`]
+//! (and [`RenderError`]) require the `png` cargo feature.
 
 use crate::Terrain;
 
@@ -10,41 +9,11 @@ use crate::Terrain;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RenderStyle {
     /// Biome-like colours (ocean, beach, grass, forest, rock, snow) with
-    /// hillshading, rivers drawn in blue.
+    /// hillshading, rivers and lakes drawn in blue.
     #[default]
     Shaded,
     /// Plain greyscale heightmap (black = lowest, white = highest).
     Greyscale,
-}
-
-/// Errors that can occur while writing an image.
-#[derive(Debug)]
-pub enum RenderError {
-    Io(std::io::Error),
-    Png(png::EncodingError),
-}
-
-impl std::fmt::Display for RenderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RenderError::Io(e) => write!(f, "io error: {e}"),
-            RenderError::Png(e) => write!(f, "png encoding error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for RenderError {}
-
-impl From<std::io::Error> for RenderError {
-    fn from(e: std::io::Error) -> Self {
-        RenderError::Io(e)
-    }
-}
-
-impl From<png::EncodingError> for RenderError {
-    fn from(e: png::EncodingError) -> Self {
-        RenderError::Png(e)
-    }
 }
 
 type Rgb = [f32; 3];
@@ -92,15 +61,14 @@ const LAKE_COLOR: Rgb = [0.17, 0.40, 0.62];
 
 /// Renders `terrain` to a row-major RGB byte buffer (`width * height * 3`).
 pub fn to_rgb(terrain: &Terrain, style: RenderStyle) -> Vec<u8> {
-    let w = terrain.width;
-    let h = terrain.height;
+    let w = terrain.width();
+    let h = terrain.height();
     let sea = terrain.sea_level;
     let mut data = Vec::with_capacity(w * h * 3);
 
     for y in 0..h {
         for x in 0..w {
-            let idx = y * w + x;
-            let v = terrain.heightmap[idx];
+            let v = terrain.heightmap[(x, y)];
 
             let rgb = match style {
                 RenderStyle::Greyscale => {
@@ -108,7 +76,7 @@ pub fn to_rgb(terrain: &Terrain, style: RenderStyle) -> Vec<u8> {
                     [g, g, g]
                 }
                 RenderStyle::Shaded => {
-                    if terrain.rivers[idx] == 1 {
+                    if terrain.rivers[(x, y)] == 1 {
                         // slightly darker in steep terrain so rivers read as
                         // carved into the landscape
                         let shade = 0.8 + 0.2 * hillshade(terrain, x, y);
@@ -117,7 +85,7 @@ pub fn to_rgb(terrain: &Terrain, style: RenderStyle) -> Vec<u8> {
                             RIVER_COLOR[1] * shade,
                             RIVER_COLOR[2] * shade,
                         ]
-                    } else if terrain.lakes[idx] == 1 {
+                    } else if terrain.lakes[(x, y)] == 1 {
                         LAKE_COLOR
                     } else if v <= sea {
                         ramp(WATER_RAMP, if sea > 0.0 { v / sea } else { 0.0 })
@@ -142,8 +110,8 @@ pub fn to_rgb(terrain: &Terrain, style: RenderStyle) -> Vec<u8> {
 /// Lambertian hillshade in `[0, 1]` from central differences, with a
 /// north-western light source.
 fn hillshade(terrain: &Terrain, x: usize, y: usize) -> f32 {
-    let w = terrain.width;
-    let h = terrain.height;
+    let w = terrain.width();
+    let h = terrain.height();
     let hm = &terrain.heightmap;
 
     let xl = x.saturating_sub(1);
@@ -154,8 +122,8 @@ fn hillshade(terrain: &Terrain, x: usize, y: usize) -> f32 {
     // vertical exaggeration keeps the relief legible at any resolution
     let z_scale = 0.15 * w.max(h) as f32;
 
-    let dzdx = (hm[y * w + xr] - hm[y * w + xl]) / (xr - xl).max(1) as f32 * z_scale;
-    let dzdy = (hm[yd * w + x] - hm[yu * w + x]) / (yd - yu).max(1) as f32 * z_scale;
+    let dzdx = (hm[(xr, y)] - hm[(xl, y)]) / (xr - xl).max(1) as f32 * z_scale;
+    let dzdy = (hm[(x, yd)] - hm[(x, yu)]) / (yd - yu).max(1) as f32 * z_scale;
 
     // light from the north-west, 45 degrees above the horizon
     let light = [-0.5f32, -0.5, std::f32::consts::FRAC_1_SQRT_2];
@@ -166,23 +134,101 @@ fn hillshade(terrain: &Terrain, x: usize, y: usize) -> f32 {
     dot.clamp(0.0, 1.0)
 }
 
-/// Renders `terrain` and writes it as a PNG file.
-pub fn save_png<P: AsRef<Path>>(
-    terrain: &Terrain,
-    path: P,
-    style: RenderStyle,
-) -> Result<(), RenderError> {
-    let data = to_rgb(terrain, style);
+#[cfg(feature = "png")]
+mod png_output {
+    use std::fs::File;
+    use std::io::BufWriter;
+    use std::path::Path;
 
-    let file = File::create(path)?;
-    let writer = BufWriter::new(file);
+    use super::{to_rgb, RenderStyle};
+    use crate::Terrain;
 
-    let mut encoder = png::Encoder::new(writer, terrain.width as u32, terrain.height as u32);
-    encoder.set_color(png::ColorType::Rgb);
-    encoder.set_depth(png::BitDepth::Eight);
+    /// Errors that can occur while writing an image.
+    #[derive(Debug)]
+    pub enum RenderError {
+        Io(std::io::Error),
+        Png(png::EncodingError),
+    }
 
-    let mut png_writer = encoder.write_header()?;
-    png_writer.write_image_data(&data)?;
+    impl std::fmt::Display for RenderError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                RenderError::Io(e) => write!(f, "io error: {e}"),
+                RenderError::Png(e) => write!(f, "png encoding error: {e}"),
+            }
+        }
+    }
 
-    Ok(())
+    impl std::error::Error for RenderError {}
+
+    impl From<std::io::Error> for RenderError {
+        fn from(e: std::io::Error) -> Self {
+            RenderError::Io(e)
+        }
+    }
+
+    impl From<png::EncodingError> for RenderError {
+        fn from(e: png::EncodingError) -> Self {
+            RenderError::Png(e)
+        }
+    }
+
+    /// Renders `terrain` and writes it as a PNG file.
+    pub fn save_png<P: AsRef<Path>>(
+        terrain: &Terrain,
+        path: P,
+        style: RenderStyle,
+    ) -> Result<(), RenderError> {
+        let data = to_rgb(terrain, style);
+
+        let file = File::create(path)?;
+        let writer = BufWriter::new(file);
+
+        let mut encoder =
+            png::Encoder::new(writer, terrain.width() as u32, terrain.height() as u32);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
+
+        let mut png_writer = encoder.write_header()?;
+        png_writer.write_image_data(&data)?;
+
+        Ok(())
+    }
+}
+
+#[cfg(feature = "png")]
+pub use png_output::{save_png, RenderError};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Terrain;
+
+    fn small_terrain() -> Terrain {
+        Terrain::builder().size(32, 32).seed(1).generate()
+    }
+
+    #[test]
+    fn rgb_buffer_has_expected_size() {
+        let t = small_terrain();
+        assert_eq!(to_rgb(&t, RenderStyle::Shaded).len(), 32 * 32 * 3);
+        assert_eq!(to_rgb(&t, RenderStyle::Greyscale).len(), 32 * 32 * 3);
+    }
+
+    #[test]
+    fn rendering_is_deterministic() {
+        let a = to_rgb(&small_terrain(), RenderStyle::Shaded);
+        let b = to_rgb(&small_terrain(), RenderStyle::Shaded);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn greyscale_encodes_elevation() {
+        let t = small_terrain();
+        let rgb = to_rgb(&t, RenderStyle::Greyscale);
+        let expected = (t.heightmap[(0, 0)].clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        assert_eq!(rgb[0], expected);
+        assert_eq!(rgb[1], expected);
+        assert_eq!(rgb[2], expected);
+    }
 }

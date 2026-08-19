@@ -53,6 +53,8 @@ Every pipeline stage can be tuned (`--octaves`, `--island`, `--droplets`,
 
 ```toml
 [dependencies]
+# add features = ["png"] if you want PNG file output; without it the
+# library's only dependency is the `noise` crate
 terrain-generator = { git = "https://github.com/fabio-t/terrain-generator", default-features = false }
 ```
 

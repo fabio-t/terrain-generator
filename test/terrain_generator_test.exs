@@ -56,6 +56,31 @@ defmodule TerrainGeneratorTest do
     end
   end
 
+  test "invalid option values raise with descriptive messages" do
+    assert_raise ArgumentError, ~r/width/, fn ->
+      TerrainGenerator.generate(width: -1)
+    end
+
+    assert_raise ArgumentError, ~r/sea_level/, fn ->
+      TerrainGenerator.generate(sea_level: 1.5)
+    end
+
+    assert_raise ArgumentError, ~r/erosion/, fn ->
+      TerrainGenerator.generate(erosion: -3)
+    end
+
+    assert_raise ArgumentError, ~r/rivers/, fn ->
+      TerrainGenerator.generate(rivers: 2.0)
+    end
+  end
+
+  test "island: true and rivers: true select the defaults" do
+    {:ok, terrain} =
+      TerrainGenerator.generate(width: 32, height: 32, island: true, rivers: true, erosion: 500)
+
+    assert terrain.width == 32
+  end
+
   @tag :tmp_dir
   test "renders a png", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "map.png")

@@ -57,10 +57,14 @@ Raises `ArgumentError` on unknown option keys.
 | `:frequency` | `2.5` | Number of large features across the map (resolution-independent). |
 | `:lacunarity` | `2.0` | Frequency multiplier between octaves. |
 | `:persistence` | `0.5` | Amplitude multiplier between octaves. |
-| `:island` | `0.9` | Island diameter as a fraction of the shorter map dimension, or `false` to let terrain reach the borders. |
+| `:island` | `0.9` | Island diameter as a fraction of the shorter map dimension, `true` for the default, or `false` to let terrain reach the borders. |
 | `:coast_noise` | `0.35` | Coastline perturbation strength. |
 | `:erosion` | `true` | `true` (one droplet per cell), `false` (skip erosion), or a positive integer droplet count. |
-| `:rivers` | `0.01` | Approximate fraction of land covered by rivers, or `false` to disable rivers and lakes. |
+| `:rivers` | `0.01` | Approximate fraction of land covered by rivers, `true` for the default, or `false` to disable rivers and lakes. |
+
+Every option is validated on the Elixir side before any native code runs;
+unknown keys and out-of-range values raise `ArgumentError` with a
+descriptive message.
 
 ## `TerrainGenerator.render_png(path, opts \\ [], style \\ :shaded)`
 
