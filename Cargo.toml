@@ -1,0 +1,13 @@
+[package]
+name = "terrain-generator"
+version = "0.1.1"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
+description = "Fractal noise terrain generator with islands and rivers"
+
+[dependencies]
+png = "0.17"
+
+[profile.release]
+opt-level = 3
