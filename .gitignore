@@ -1,2 +1,14 @@
 target/
 .idea/
+
+# Elixir
+_build/
+deps/
+doc/
+erl_crash.dump
+*.ez
+terrain_generator-*.tar
+
+# generated maps
+*.png
+!docs/*.png

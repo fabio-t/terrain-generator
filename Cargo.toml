@@ -1,13 +1,27 @@
+[workspace]
+members = [".", "native/terrain_generator_nif"]
+
 [package]
 name = "terrain-generator"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
-description = "Fractal noise terrain generator with islands and rivers"
+description = "Procedural terrain generator: fractal noise, hydraulic erosion and river extraction"
+repository = "https://github.com/fabio-t/terrain-generator"
 
 [dependencies]
+noise = "0.9"
 png = "0.17"
+clap = { version = "4", features = ["derive"], optional = true }
+
+[features]
+default = ["cli"]
+cli = ["dep:clap"]
+
+[[bin]]
+name = "terrain-generator"
+required-features = ["cli"]
 
 [profile.release]
 opt-level = 3

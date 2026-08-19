@@ -1,42 +1,162 @@
-/*
- * Copyright (c) 2015-2017 Fabio Ticconi
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Instant;
 
-use terrain_generator::heightmap::HeightMap;
-use terrain_generator::utils::image_writer::ImageWriter;
+use clap::Parser;
+use terrain_generator::{
+    ErosionParams, IslandParams, NoiseParams, RenderStyle, RiverParams, Terrain,
+};
 
-fn main() {
-    let width = 1024;
-    let height = 1024;
+/// Procedural terrain generator: fractal noise, hydraulic erosion and rivers.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Map width in cells
+    #[arg(short = 'W', long, default_value_t = 512)]
+    width: usize,
 
-    let image = ImageWriter::new(width, height, false);
+    /// Map height in cells
+    #[arg(short = 'H', long, default_value_t = 512)]
+    height: usize,
 
-    let mut height_map = HeightMap::new()
-        .size(width, height)
-        .island(0.8)
-        .rivers(0.8, 0.03, 0.001, 1);
+    /// First seed to generate
+    #[arg(short, long, default_value_t = 0)]
+    seed: u32,
 
-    height_map
-        .fractal_noise
-        .set(16, 0.5, 3.0 / width.max(height) as f32, 1.0);
+    /// Number of maps to generate (seeds seed..seed+count)
+    #[arg(short = 'n', long, default_value_t = 1)]
+    count: u32,
 
-    for seed in 0..10 {
-        println!("seed: {}", seed);
+    /// Output directory
+    #[arg(short, long, default_value = ".")]
+    output: PathBuf,
 
-        height_map.fractal_noise.seed(seed);
+    /// Output file prefix; files are named <prefix><seed>.png
+    #[arg(long, default_value = "map")]
+    prefix: String,
 
-        image.save_png(format!("map{}.png", seed), &height_map.build());
+    /// Sea level in [0, 1)
+    #[arg(long, default_value_t = 0.08)]
+    sea_level: f32,
+
+    /// Noise octaves
+    #[arg(long, default_value_t = 8)]
+    octaves: usize,
+
+    /// Number of large features across the map
+    #[arg(long, default_value_t = 2.5)]
+    frequency: f64,
+
+    /// Frequency multiplier between octaves
+    #[arg(long, default_value_t = 2.0)]
+    lacunarity: f64,
+
+    /// Amplitude multiplier between octaves
+    #[arg(long, default_value_t = 0.5)]
+    persistence: f64,
+
+    /// Island diameter as a fraction of the shorter map dimension
+    #[arg(long, default_value_t = 0.9)]
+    island: f32,
+
+    /// Strength of the coastline perturbation noise
+    #[arg(long, default_value_t = 0.35)]
+    coast_noise: f32,
+
+    /// Disable island shaping (terrain reaches the borders)
+    #[arg(long)]
+    no_island: bool,
+
+    /// Number of erosion droplets [default: one per cell]
+    #[arg(long)]
+    droplets: Option<usize>,
+
+    /// Disable hydraulic erosion
+    #[arg(long)]
+    no_erosion: bool,
+
+    /// Approximate fraction of land covered by rivers
+    #[arg(long, default_value_t = 0.01)]
+    rivers: f32,
+
+    /// Disable river extraction
+    #[arg(long)]
+    no_rivers: bool,
+
+    /// Render a greyscale heightmap instead of shaded colours
+    #[arg(long)]
+    grey: bool,
+}
+
+fn main() -> ExitCode {
+    let args = Args::parse();
+
+    let mut builder = Terrain::builder()
+        .size(args.width, args.height)
+        .sea_level(args.sea_level)
+        .noise(NoiseParams {
+            octaves: args.octaves,
+            frequency: args.frequency,
+            lacunarity: args.lacunarity,
+            persistence: args.persistence,
+        });
+
+    builder = if args.no_island {
+        builder.no_island()
+    } else {
+        builder.island(IslandParams {
+            size: args.island,
+            coast_noise: args.coast_noise,
+        })
+    };
+
+    builder = if args.no_erosion {
+        builder.no_erosion()
+    } else {
+        builder.erosion(ErosionParams {
+            droplets: args.droplets,
+            ..Default::default()
+        })
+    };
+
+    builder = if args.no_rivers {
+        builder.no_rivers()
+    } else {
+        builder.rivers(RiverParams {
+            density: args.rivers,
+        })
+    };
+
+    let style = if args.grey {
+        RenderStyle::Greyscale
+    } else {
+        RenderStyle::Shaded
+    };
+
+    if let Err(e) = std::fs::create_dir_all(&args.output) {
+        eprintln!(
+            "cannot create output directory {}: {e}",
+            args.output.display()
+        );
+        return ExitCode::FAILURE;
     }
+
+    for seed in args.seed..args.seed.saturating_add(args.count) {
+        let start = Instant::now();
+        let terrain = builder.clone().seed(seed).generate();
+
+        let path = args.output.join(format!("{}{}.png", args.prefix, seed));
+        if let Err(e) = terrain.save_png(&path, style) {
+            eprintln!("failed to write {}: {e}", path.display());
+            return ExitCode::FAILURE;
+        }
+
+        println!(
+            "seed {seed}: {} ({:.1}s)",
+            path.display(),
+            start.elapsed().as_secs_f32()
+        );
+    }
+
+    ExitCode::SUCCESS
 }
