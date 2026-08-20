@@ -1,5 +1,6 @@
 # Terrain generator
 
+[![CI](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml)
 [![Latest Github release](https://img.shields.io/github/release/fabio-t/terrain-generator.svg)](https://github.com/fabio-t/terrain-generator/releases/latest)
 
 Procedural terrain generator written in Rust. It builds a fractal-noise
@@ -16,7 +17,8 @@ It is usable three ways:
 - as an **Elixir library** via a Rustler NIF (`mix` dependency).
 
 Generation is fully deterministic: the same seed and parameters always
-produce the same terrain, from every entry point.
+produce the same terrain, from every entry point. A 512×512 map generates
+in about half a second, 1024×1024 in about two.
 
 ## Pipeline
 
@@ -34,20 +36,55 @@ produce the same terrain, from every entry point.
 The output is not just an image: you get the heightmap, a flow/moisture
 map, and river and lake masks as raw data for use in games or simulations.
 
-## CLI
+## Installing the CLI
+
+### Prebuilt binaries
+
+Grab an archive for your platform from the
+[latest release](https://github.com/fabio-t/terrain-generator/releases/latest):
+
+| Platform | File |
+|----------|------|
+| Linux x86_64 (static, runs on any distro) | `terrain-generator-<tag>-x86_64-unknown-linux-musl.tar.gz` |
+| macOS Apple Silicon | `terrain-generator-<tag>-aarch64-apple-darwin.tar.gz` |
+| macOS Intel | `terrain-generator-<tag>-x86_64-apple-darwin.tar.gz` |
+| Windows x86_64 | `terrain-generator-<tag>-x86_64-pc-windows-msvc.zip` |
+
+Unpack it and run the `terrain-generator` binary inside — there are no
+other files to install. `SHA256SUMS.txt` on the release page has the
+checksums.
+
+### With cargo
+
+Requires a [Rust toolchain](https://rustup.rs) (1.85 or newer):
 
 ```sh
-cargo run --release                        # one 512x512 map, seed 0 -> map0.png
-cargo run --release -- -s 10 -n 5          # seeds 10..14
-cargo run --release -- -W 1024 -H 1024 --rivers 0.02 --grey
-cargo run --release -- --help              # all options
+cargo install --git https://github.com/fabio-t/terrain-generator terrain-generator
 ```
 
-Or install it: `cargo install --path .` then `terrain-generator ...`.
+### From a clone
 
-Every pipeline stage can be tuned (`--octaves`, `--island`, `--droplets`,
-`--rivers`, `--sea-level`, ...) or disabled (`--no-island`,
-`--no-erosion`, `--no-rivers`).
+```sh
+git clone https://github.com/fabio-t/terrain-generator
+cd terrain-generator
+cargo run --release            # generates map0.png in the current directory
+```
+
+## Using the CLI
+
+```sh
+terrain-generator                          # one 512x512 map, seed 0 -> map0.png
+terrain-generator -s 10 -n 5               # five maps, seeds 10..14
+terrain-generator -W 1024 -H 1024          # bigger map
+terrain-generator --rivers 0.02 --island 0.7 --droplets 2000000
+terrain-generator --grey -o heightmaps/    # greyscale heightmaps into a directory
+terrain-generator --help                   # all options
+```
+
+Every pipeline stage can be tuned (`--octaves`, `--frequency`, `--island`,
+`--coast-noise`, `--droplets`, `--rivers`, `--sea-level`, ...) or disabled
+(`--no-island`, `--no-erosion`, `--no-rivers`). The same seed with the
+same options always reproduces the same map.
 
 ## Rust library
 
@@ -63,10 +100,13 @@ use terrain_generator::{RenderStyle, Terrain};
 
 let terrain = Terrain::builder().size(512, 512).seed(42).generate();
 
-terrain.save_png("map.png", RenderStyle::Shaded)?;
-
-let elevation = terrain.height_at(100, 100); // [0, 1]
+let elevation = terrain.heightmap[(100, 100)]; // [0, 1]
+let moisture  = terrain.flow_at(100, 100);     // [0, 1], from flow accumulation
 let river     = terrain.is_river(100, 100);
+let lake      = terrain.is_lake(100, 100);
+
+// with the `png` feature:
+terrain.save_png("map.png", RenderStyle::Shaded)?;
 ```
 
 Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
@@ -74,8 +114,8 @@ Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
 ## Elixir library
 
 The repository is also a Mix package wrapping the same Rust core through
-[Rustler](https://hexdocs.pm/rustler). A Rust toolchain is required at
-compile time.
+[Rustler](https://hexdocs.pm/rustler). Erlang/OTP 24+, Elixir 1.15+ and a
+Rust toolchain are required at compile time.
 
 ```elixir
 def deps do
@@ -104,6 +144,11 @@ cargo test                 # Rust unit + doc tests
 cargo clippy --workspace   # lints
 mix test                   # Elixir tests (needs Elixir + Rust)
 ```
+
+CI runs formatting, clippy and both test suites on every push. Releases
+are cut by pushing a tag: `v1.2.3` publishes a release with binaries for
+Linux, macOS and Windows attached; a pre-release tag like `v1.2.3-rc1`
+publishes a GitHub pre-release.
 
 ## License
 
