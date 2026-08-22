@@ -12,3 +12,4 @@ terrain_generator-*.tar
 # generated maps
 *.png
 !docs/*.png
+!docs/options/*.png

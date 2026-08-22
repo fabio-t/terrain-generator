@@ -86,6 +86,96 @@ Every pipeline stage can be tuned (`--octaves`, `--frequency`, `--island`,
 (`--no-island`, `--no-erosion`, `--no-rivers`). The same seed with the
 same options always reproduces the same map.
 
+## What the options do
+
+Every map below uses **seed 1** at 512×512; each row changes a single
+option against the defaults. The same knobs exist under the same names in
+the Rust API (`IslandParams`, `ErosionParams`, ...) and the Elixir API
+(`:island`, `:coast_noise`, `:erosion`, `:rivers`, `:sea_level`, ...).
+
+### Island shape — `--coast-noise`
+
+How strongly noise perturbs the radial island falloff: `0` is a perfectly
+round island, `1` (the default) carves bays, peninsulas and offshore
+islets.
+
+<table><tr>
+<td align="center"><img src="docs/options/coast-noise-0.png" width="240"><br><code>--coast-noise 0</code></td>
+<td align="center"><img src="docs/options/coast-noise-05.png" width="240"><br><code>--coast-noise 0.5</code></td>
+<td align="center"><img src="docs/options/default.png" width="240"><br><code>--coast-noise 1</code> (default)</td>
+</tr></table>
+
+### Island size — `--island` / `--no-island`
+
+Island diameter as a fraction of the shorter map dimension, or no island
+mask at all (terrain runs to the borders — useful for tiling a larger
+world out of maps).
+
+<table><tr>
+<td align="center"><img src="docs/options/island-07.png" width="240"><br><code>--island 0.7</code></td>
+<td align="center"><img src="docs/options/default.png" width="240"><br><code>--island 1.0</code> (default)</td>
+<td align="center"><img src="docs/options/no-island.png" width="240"><br><code>--no-island</code></td>
+</tr></table>
+
+### Erosion — `--no-erosion` / `--droplets`
+
+Without erosion the raw fractal terrain is smooth and blobby. The default
+simulates one droplet per cell; more droplets keep carving — valleys
+deepen, sediment builds plains, coastlines erode.
+
+<table><tr>
+<td align="center"><img src="docs/options/no-erosion.png" width="240"><br><code>--no-erosion</code></td>
+<td align="center"><img src="docs/options/default.png" width="240"><br>default (262k droplets)</td>
+<td align="center"><img src="docs/options/droplets-1m.png" width="240"><br><code>--droplets 1000000</code></td>
+</tr></table>
+
+### River density — `--rivers`
+
+The approximate fraction of land covered by rivers (extracted from flow
+accumulation, so they always follow the valleys). Shown as 1:1 crops so
+the individual rivers are visible.
+
+<table><tr>
+<td align="center"><img src="docs/options/rivers-0003.png" width="240"><br><code>--rivers 0.003</code></td>
+<td align="center"><img src="docs/options/rivers-001.png" width="240"><br><code>--rivers 0.01</code> (default)</td>
+<td align="center"><img src="docs/options/rivers-004.png" width="240"><br><code>--rivers 0.04</code></td>
+</tr></table>
+
+### Sea level — `--sea-level`
+
+Cells at or below this elevation are ocean. Raising it drowns the
+lowlands and turns valley systems into fjord-like inlets.
+
+<table><tr>
+<td align="center"><img src="docs/options/sea-level-003.png" width="240"><br><code>--sea-level 0.03</code></td>
+<td align="center"><img src="docs/options/default.png" width="240"><br><code>--sea-level 0.08</code> (default)</td>
+<td align="center"><img src="docs/options/sea-level-02.png" width="240"><br><code>--sea-level 0.2</code></td>
+</tr></table>
+
+### Base noise — `--frequency` / `--octaves`
+
+`--frequency` is the number of large features across the map (defaults to
+`2.5`): lower gives one big landmass, higher gives busier, more broken
+terrain. `--octaves` (default `8`) controls fine detail; fewer octaves
+give smoother, softer relief.
+
+<table><tr>
+<td align="center"><img src="docs/options/frequency-15.png" width="240"><br><code>--frequency 1.5</code></td>
+<td align="center"><img src="docs/options/frequency-4.png" width="240"><br><code>--frequency 4</code></td>
+<td align="center"><img src="docs/options/octaves-4.png" width="240"><br><code>--octaves 4</code></td>
+</tr></table>
+
+### Output style — `--grey`
+
+The shaded render is for looking at; the greyscale render is the raw
+heightmap (black = 0, white = 1), ready to import into game engines and
+other tools.
+
+<table><tr>
+<td align="center"><img src="docs/options/default.png" width="240"><br>default (shaded)</td>
+<td align="center"><img src="docs/options/greyscale.png" width="240"><br><code>--grey</code></td>
+</tr></table>
+
 ## Rust library
 
 ```toml
