@@ -105,9 +105,11 @@ fn build(opts: &Options) -> Terrain {
 
 fn f32_binary<'a>(env: Env<'a>, data: &[f32]) -> Binary<'a> {
     let mut bin = NewBinary::new(env, data.len() * 4);
-    let slice = bin.as_mut_slice();
-    for (chunk, v) in slice.chunks_exact_mut(4).zip(data) {
-        chunk.copy_from_slice(&v.to_le_bytes());
+    // as_chunks_mut gives fixed-size arrays, so each float is written with
+    // a plain assignment rather than a length-checked copy
+    let (chunks, _) = bin.as_mut_slice().as_chunks_mut::<4>();
+    for (chunk, v) in chunks.iter_mut().zip(data) {
+        *chunk = v.to_le_bytes();
     }
     bin.into()
 }
