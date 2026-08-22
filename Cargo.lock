@@ -360,6 +360,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "terrain_generator_ffi"
+version = "0.2.0"
+dependencies = [
+ "terrain-generator",
+]
+
+[[package]]
 name = "terrain_generator_nif"
 version = "0.2.0"
 dependencies = [

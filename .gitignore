@@ -13,3 +13,6 @@ terrain_generator-*.tar
 *.png
 !docs/*.png
 !docs/options/*.png
+
+# Java bindings build output
+java/out/

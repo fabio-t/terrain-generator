@@ -22,6 +22,13 @@
 - **River threshold modes** (`RiverThreshold`): the existing `Density`
   area-share, plus absolute `MinUpstreamCells` and resolution-independent
   `PerEdge`. Documented when to use which.
+- **Java bindings** (`java/`) over a new **C ABI**
+  (`native/terrain_generator_ffi`, `include/terrain_generator.h`). Java 22+
+  binds the shared library directly through the Foreign Function & Memory
+  API — no JNI shim, no Java-specific code in the Rust sources — and the
+  same C interface serves C, C++, C# and other FFI-capable languages. The
+  binding tests assert that terrain generated from Java matches the
+  checksum pinned in the Rust test suite.
 - **Per-layer file output** (`Layer`, `Terrain::save_layer_png`,
   `--layers height,flow,rivers,lakes,ocean`): one generation, one file per
   layer. Elevation and flow are 16-bit greyscale; masks are 8-bit.

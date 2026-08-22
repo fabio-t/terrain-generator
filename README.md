@@ -10,11 +10,13 @@ that **rivers follow the eroded valleys** and depressions become lakes.
 
 ![example map](docs/example.png)
 
-It is usable three ways:
+It is usable four ways:
 
 - as a **CLI** that renders maps to PNG,
 - as a **Rust library** (`cargo` dependency),
-- as an **Elixir library** via a Rustler NIF (`mix` dependency).
+- as an **Elixir library** via a Rustler NIF (`mix` dependency),
+- as a **Java library** via the Foreign Function & Memory API — and, through
+  the same C ABI, from C, C++, C# or anything else with an FFI.
 
 Generation is fully deterministic: the same seed and parameters always
 produce the same terrain, from every entry point. It is single-threaded
@@ -293,12 +295,47 @@ dirty CPU scheduler, so generation never blocks your schedulers.
 
 Full reference: [docs/elixir_api.md](docs/elixir_api.md), or `mix docs`.
 
+## Java library
+
+The generator exposes a plain **C ABI**, which Java 22+ binds directly
+through the [Foreign Function & Memory API][ffm] — no JNI shim, and no
+Java-specific code inside the Rust library. The Java sources have no
+dependencies, so they drop into Maven, Gradle or a plain classpath.
+
+```sh
+./java/build.sh   # builds the native library, compiles the bindings, runs their tests
+```
+
+```java
+import com.github.fabioticconi.tergen.*;
+
+TerrainConfig config = TerrainConfig.defaults().size(512, 512).seed(42);
+
+try (Terrain terrain = TerrainGenerator.generate(config)) {
+    float elevation = terrain.heightAt(100, 100);
+    boolean river   = terrain.isRiver(100, 100);
+    terrain.savePng(Layer.SHADED, Path.of("map.png"));
+}
+```
+
+Layers can be copied into Java arrays or borrowed as a zero-copy
+`MemorySegment`. The binding tests assert that a map generated from Java
+hashes to the same checksum as the Rust test suite pins, so the three
+language bindings are known to produce identical terrain.
+
+Full reference: [docs/java_api.md](docs/java_api.md). The C interface
+itself is [`include/terrain_generator.h`](include/terrain_generator.h), if
+you would rather use `jextract` or call it from C/C++.
+
+[ffm]: https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html
+
 ## Development
 
 ```sh
-cargo test                 # Rust unit + doc tests
+cargo test --workspace     # Rust unit, integration and doc tests
 cargo clippy --workspace   # lints
 mix test                   # Elixir tests (needs Elixir + Rust)
+./java/build.sh            # Java binding tests (needs JDK 22+ and Rust)
 ```
 
 CI (formatting, clippy, both test suites) runs automatically on pushes

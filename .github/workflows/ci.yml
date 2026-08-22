@@ -62,3 +62,18 @@ jobs:
         run: mix compile --warnings-as-errors
       - name: Test
         run: mix test
+
+  java:
+    name: Java
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          # the bindings use the Foreign Function & Memory API, final in 22
+          java-version: "25"
+      - name: Build native library and run the binding tests
+        run: ./java/build.sh
