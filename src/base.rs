@@ -54,18 +54,34 @@ pub fn generate(
 }
 
 /// Multiplies the map by a radial falloff so terrain fades into ocean at the
-/// edges. A secondary low-frequency noise perturbs the falloff to produce
-/// irregular, natural-looking coastlines.
+/// edges. A secondary noise field perturbs the falloff to produce irregular,
+/// natural-looking coastlines: bays, peninsulas and offshore islets.
 fn apply_island_mask(map: &mut Grid<f32>, seed: u32, island: &IslandParams) {
     let width = map.width();
     let height = map.height();
 
     let coast = Fbm::<OpenSimplex>::new(seed.wrapping_add(1))
-        .set_octaves(4)
+        .set_octaves(6)
         .set_frequency(3.0)
         .set_persistence(0.5);
 
     let scale = 1.0 / width.max(height) as f64;
+
+    // sample the coast field and normalise it to [-1, 1], so `coast_noise`
+    // is a true amplitude relative to the radial gradient regardless of
+    // the raw range the noise happens to produce
+    let mut wobble = Grid::new(width, height, 0.0f32);
+    let mut min_v = f32::MAX;
+    let mut max_v = f32::MIN;
+    for y in 0..height {
+        for x in 0..width {
+            let v = coast.get([x as f64 * scale, y as f64 * scale]) as f32;
+            wobble[(x, y)] = v;
+            min_v = min_v.min(v);
+            max_v = max_v.max(v);
+        }
+    }
+    let range = (max_v - min_v).max(f32::EPSILON);
 
     let cx = width as f32 * 0.5;
     let cy = height as f32 * 0.5;
@@ -77,9 +93,9 @@ fn apply_island_mask(map: &mut Grid<f32>, seed: u32, island: &IslandParams) {
             let dy = y as f32 - cy;
             let d = (dx * dx + dy * dy).sqrt() / radius;
 
-            let wobble = coast.get([x as f64 * scale, y as f64 * scale]).abs() as f32;
+            let w = ((wobble[(x, y)] - min_v) * 2.0 / range - 1.0).abs();
 
-            let falloff = 1.0 - (d.powi(3) + wobble * island.coast_noise);
+            let falloff = 1.0 - (d.powi(3) + w * island.coast_noise);
 
             let v = &mut map[(x, y)];
             *v = (*v * falloff).clamp(0.0, 1.0);

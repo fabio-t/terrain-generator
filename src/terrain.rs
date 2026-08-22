@@ -51,18 +51,19 @@ impl NoiseParams {
 #[derive(Clone, Debug)]
 pub struct IslandParams {
     /// Island diameter as a fraction of the shorter map dimension, in
-    /// `(0, ~1.2]`. Default: `0.9`.
+    /// `(0, ~1.2]`. Default: `1.0`.
     pub size: f32,
-    /// Strength of the coastline perturbation noise; `0` gives a perfectly
-    /// round island. Default: `0.35`.
+    /// Strength of the coastline perturbation noise, relative to the
+    /// radial gradient: `0` gives a perfectly round island, `1` lets the
+    /// noise carve bays, peninsulas and offshore islets. Default: `1.0`.
     pub coast_noise: f32,
 }
 
 impl Default for IslandParams {
     fn default() -> Self {
         Self {
-            size: 0.9,
-            coast_noise: 0.35,
+            size: 1.0,
+            coast_noise: 1.0,
         }
     }
 }

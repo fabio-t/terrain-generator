@@ -109,8 +109,8 @@ in — the Elixir bindings do exactly that on their side of the boundary.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `size: f32` | `0.9` | Island diameter as a fraction of the shorter map dimension. |
-| `coast_noise: f32` | `0.35` | Coastline perturbation strength; `0` gives a round island. |
+| `size: f32` | `1.0` | Island diameter as a fraction of the shorter map dimension. |
+| `coast_noise: f32` | `1.0` | Coastline perturbation strength relative to the radial gradient; `0` gives a round island, `1` carves bays, peninsulas and offshore islets. |
 
 ### `ErosionParams`
 
@@ -193,8 +193,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..Default::default()
         })
         .island(IslandParams {
-            size: 0.9,
-            coast_noise: 0.35,
+            size: 1.0,
+            coast_noise: 1.0,
         })
         .erosion(ErosionParams {
             droplets: Some(2_000_000), // extra-deep valleys

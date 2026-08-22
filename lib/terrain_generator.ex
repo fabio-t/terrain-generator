@@ -37,8 +37,9 @@ defmodule TerrainGenerator do
     * `:persistence` — amplitude multiplier between octaves (default `0.5`)
     * `:island` — island diameter as a fraction of the shorter map
       dimension, `true` for the default size, or `false` to let terrain
-      reach the borders (default `0.9`)
-    * `:coast_noise` — coastline perturbation strength (default `0.35`)
+      reach the borders (default `1.0`)
+    * `:coast_noise` — coastline perturbation strength; `0` gives a
+      perfectly round island (default `1.0`)
     * `:erosion` — `true`/`false`, or a droplet count to override the
       default of one droplet per cell (default `true`)
     * `:rivers` — approximate fraction of land covered by rivers, `true`
@@ -60,8 +61,8 @@ defmodule TerrainGenerator do
     frequency: 2.5,
     lacunarity: 2.0,
     persistence: 0.5,
-    island: 0.9,
-    coast_noise: 0.35,
+    island: 1.0,
+    coast_noise: 1.0,
     erosion: true,
     rivers: 0.01
   }

@@ -56,11 +56,11 @@ struct Args {
     persistence: f64,
 
     /// Island diameter as a fraction of the shorter map dimension
-    #[arg(long, default_value_t = 0.9)]
+    #[arg(long, default_value_t = 1.0)]
     island: f32,
 
-    /// Strength of the coastline perturbation noise
-    #[arg(long, default_value_t = 0.35)]
+    /// Strength of the coastline perturbation noise (0 = round island)
+    #[arg(long, default_value_t = 1.0)]
     coast_noise: f32,
 
     /// Disable island shaping (terrain reaches the borders)

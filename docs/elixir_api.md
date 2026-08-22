@@ -57,8 +57,8 @@ Raises `ArgumentError` on unknown option keys.
 | `:frequency` | `2.5` | Number of large features across the map (resolution-independent). |
 | `:lacunarity` | `2.0` | Frequency multiplier between octaves. |
 | `:persistence` | `0.5` | Amplitude multiplier between octaves. |
-| `:island` | `0.9` | Island diameter as a fraction of the shorter map dimension, `true` for the default, or `false` to let terrain reach the borders. |
-| `:coast_noise` | `0.35` | Coastline perturbation strength. |
+| `:island` | `1.0` | Island diameter as a fraction of the shorter map dimension, `true` for the default, or `false` to let terrain reach the borders. |
+| `:coast_noise` | `1.0` | Coastline perturbation strength; `0` gives a round island. |
 | `:erosion` | `true` | `true` (one droplet per cell), `false` (skip erosion), or a positive integer droplet count. |
 | `:rivers` | `0.01` | Approximate fraction of land covered by rivers, `true` for the default, or `false` to disable rivers and lakes. |
 
