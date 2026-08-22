@@ -1,0 +1,79 @@
+name: CI
+
+# Pushes to the default branch run CI automatically. Everything else —
+# pull requests included — is run on demand from the Actions tab
+# ("Run workflow", pick any branch), to keep Actions minutes down.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-features -- -D warnings
+      - name: Test (default features)
+        run: cargo test --workspace
+      - name: Build (library only, no default features)
+        run: cargo build --no-default-features
+      - name: Test (png feature only)
+        run: cargo test --lib --no-default-features --features png
+
+      # keeps the declared rust-version honest: bump it here if this fails
+      - name: Verify MSRV (rust-version in Cargo.toml)
+        run: |
+          MSRV=$(cargo metadata --format-version 1 --no-deps | python3 -c "
+          import json, sys
+          vs = [p['rust_version'] for p in json.load(sys.stdin)['packages'] if p.get('rust_version')]
+          print(max(vs, key=lambda v: tuple(int(x) for x in v.split('.'))))")
+          echo "declared MSRV: $MSRV"
+          rustup toolchain install "$MSRV" --profile minimal
+          cargo +"$MSRV" check --workspace --locked
+
+  elixir:
+    name: Elixir
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20"
+      - name: Fetch dependencies
+        run: mix deps.get
+      - name: Check formatting
+        run: mix format --check-formatted
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+      - name: Test
+        run: mix test
+
+  java:
+    name: Java
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          # the bindings use the Foreign Function & Memory API, final in 22
+          java-version: "25"
+      - name: Build native library and run the binding tests
+        run: ./java/build.sh

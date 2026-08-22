@@ -1,0 +1,102 @@
+name: Release
+
+# Pushing a tag like v0.1.1 creates a GitHub release with prebuilt CLI
+# binaries attached. A tag with a pre-release suffix (v0.1.5-rc3) is
+# published as a pre-release.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test before release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --locked
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked -p terrain-generator --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="terrain-generator-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir "$name"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            cp "target/${{ matrix.target }}/release/terrain-generator.exe" "$name/"
+          else
+            cp "target/${{ matrix.target }}/release/terrain-generator" "$name/"
+          fi
+          cp README.md LICENSE CHANGELOG.md "$name/"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            7z a "$name.zip" "$name"
+          else
+            tar czf "$name.tar.gz" "$name"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            terrain-generator-*.tar.gz
+            terrain-generator-*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum terrain-generator-* > SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          # a hyphen in the tag (v0.1.5-rc3) marks a semver pre-release
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true

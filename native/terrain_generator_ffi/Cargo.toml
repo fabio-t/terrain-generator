@@ -1,0 +1,16 @@
+[package]
+name = "terrain_generator_ffi"
+version = "0.2.0"
+edition = "2021"
+rust-version.workspace = true
+license = "Apache-2.0"
+authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
+description = "C ABI for the terrain-generator crate, for use from Java, C, C++ and any other FFI-capable language"
+publish = false
+
+[lib]
+name = "terrain_generator_ffi"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+terrain-generator = { path = "../..", default-features = false, features = ["png"] }

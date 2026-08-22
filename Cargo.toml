@@ -1,0 +1,48 @@
+[workspace]
+members = [".", "native/terrain_generator_nif", "native/terrain_generator_ffi"]
+
+[workspace.package]
+# Minimum supported Rust version for every crate here.
+# Currently set by rustler 0.38, which the Elixir NIF depends on.
+rust-version = "1.91"
+
+[package]
+name = "terrain-generator"
+version = "0.2.0"
+edition = "2021"
+rust-version.workspace = true
+license = "Apache-2.0"
+authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
+description = "Procedural terrain generator: fractal noise, hydraulic erosion and river extraction"
+repository = "https://github.com/fabio-t/terrain-generator"
+keywords = ["terrain", "procedural", "heightmap", "erosion", "noise"]
+categories = ["game-development", "simulation"]
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[dependencies]
+noise = "0.9"
+png = { version = "0.18", optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
+
+[dev-dependencies]
+# decoding written layers back in the integration tests
+png = "0.18"
+
+[features]
+default = ["cli"]
+# PNG file output (Terrain::save_png); to_rgb works without it.
+png = ["dep:png"]
+# The terrain-generator command-line binary.
+cli = ["dep:clap", "png"]
+
+[[bin]]
+name = "terrain-generator"
+required-features = ["cli"]
+
+[profile.release]
+opt-level = 3
