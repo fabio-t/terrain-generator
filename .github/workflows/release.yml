@@ -6,7 +6,11 @@ name: Release
 on:
   push:
     tags:
+      # both conventions fire a release: this project's tags used to be
+      # unprefixed (0.1.1), and a mistyped convention would otherwise
+      # publish nothing at all, silently
       - "v*"
+      - "[0-9]*"
 
 permissions:
   contents: write
