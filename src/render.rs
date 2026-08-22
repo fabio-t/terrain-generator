@@ -5,6 +5,86 @@
 
 use crate::Terrain;
 
+/// A single output layer of a [`Terrain`], for writing one file per layer.
+///
+/// [`Shaded`](Self::Shaded) is a picture; the rest are *data* layers meant
+/// to be read back by other tools, so they are written losslessly:
+/// elevation and flow as 16-bit greyscale (8 bits would quantise elevation
+/// into visible terraces), masks as 8-bit black/white.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Layer {
+    /// The shaded relief render — biome colours, hillshading, water.
+    Shaded,
+    /// Elevation, 16-bit greyscale, `0` = 0.0 and `65535` = 1.0.
+    Height,
+    /// Normalised flow accumulation, 16-bit greyscale.
+    Flow,
+    /// River mask, 8-bit: `255` where a river runs.
+    Rivers,
+    /// Lake mask, 8-bit: `255` where a lake stands.
+    Lakes,
+    /// Ocean mask, 8-bit: `255` where the cell is sea.
+    Ocean,
+}
+
+impl Layer {
+    /// Every layer, in a stable order.
+    pub const ALL: [Layer; 6] = [
+        Layer::Shaded,
+        Layer::Height,
+        Layer::Flow,
+        Layer::Rivers,
+        Layer::Lakes,
+        Layer::Ocean,
+    ];
+
+    /// The lowercase name used by [`FromStr`](std::str::FromStr) and
+    /// suitable as a filename suffix.
+    pub fn name(self) -> &'static str {
+        match self {
+            Layer::Shaded => "shaded",
+            Layer::Height => "height",
+            Layer::Flow => "flow",
+            Layer::Rivers => "rivers",
+            Layer::Lakes => "lakes",
+            Layer::Ocean => "ocean",
+        }
+    }
+}
+
+impl std::fmt::Display for Layer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
+/// Returned when a string does not name a [`Layer`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnknownLayer(pub String);
+
+impl std::fmt::Display for UnknownLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "unknown layer '{}' (expected one of: shaded, height, flow, rivers, lakes, ocean)",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for UnknownLayer {}
+
+impl std::str::FromStr for Layer {
+    type Err = UnknownLayer;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Layer::ALL
+            .into_iter()
+            .find(|l| l.name() == s)
+            .ok_or_else(|| UnknownLayer(s.to_string()))
+    }
+}
+
 /// How a [`Terrain`] is turned into an image.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RenderStyle {
@@ -87,7 +167,7 @@ pub fn to_rgb(terrain: &Terrain, style: RenderStyle) -> Vec<u8> {
                         ]
                     } else if terrain.lakes[(x, y)] == 1 {
                         LAKE_COLOR
-                    } else if v <= sea {
+                    } else if terrain.ocean[(x, y)] == 1 {
                         ramp(WATER_RAMP, if sea > 0.0 { v / sea } else { 0.0 })
                     } else {
                         let t = (v - sea) / (1.0 - sea);
@@ -173,6 +253,84 @@ mod png_output {
         }
     }
 
+    /// Writes one [`Layer`](super::Layer) of `terrain` as a PNG file.
+    ///
+    /// Data layers are written losslessly — see [`Layer`](super::Layer).
+    pub fn save_layer_png<P: AsRef<Path>>(
+        terrain: &Terrain,
+        layer: super::Layer,
+        path: P,
+    ) -> Result<(), RenderError> {
+        use super::Layer;
+
+        let (w, h) = (terrain.width() as u32, terrain.height() as u32);
+
+        match layer {
+            Layer::Shaded => save_png(terrain, path, RenderStyle::Shaded),
+            Layer::Height => write_gray16(&terrain.heightmap, w, h, path),
+            Layer::Flow => write_gray16(&terrain.flow, w, h, path),
+            Layer::Rivers => write_mask(&terrain.rivers, w, h, path),
+            Layer::Lakes => write_mask(&terrain.lakes, w, h, path),
+            Layer::Ocean => write_mask(&terrain.ocean, w, h, path),
+        }
+    }
+
+    /// 16-bit greyscale from a `[0, 1]` grid, big-endian as PNG requires.
+    fn write_gray16<P: AsRef<Path>>(
+        grid: &crate::Grid<f32>,
+        w: u32,
+        h: u32,
+        path: P,
+    ) -> Result<(), RenderError> {
+        let mut data = Vec::with_capacity(grid.len() * 2);
+        for v in grid.iter() {
+            let q = (v.clamp(0.0, 1.0) * 65535.0 + 0.5) as u16;
+            data.extend_from_slice(&q.to_be_bytes());
+        }
+        write_png(
+            path,
+            w,
+            h,
+            png::ColorType::Grayscale,
+            png::BitDepth::Sixteen,
+            &data,
+        )
+    }
+
+    /// 8-bit black/white from a 0/1 mask grid.
+    fn write_mask<P: AsRef<Path>>(
+        grid: &crate::Grid<u8>,
+        w: u32,
+        h: u32,
+        path: P,
+    ) -> Result<(), RenderError> {
+        let data: Vec<u8> = grid.iter().map(|v| if *v == 0 { 0 } else { 255 }).collect();
+        write_png(
+            path,
+            w,
+            h,
+            png::ColorType::Grayscale,
+            png::BitDepth::Eight,
+            &data,
+        )
+    }
+
+    fn write_png<P: AsRef<Path>>(
+        path: P,
+        w: u32,
+        h: u32,
+        color: png::ColorType,
+        depth: png::BitDepth,
+        data: &[u8],
+    ) -> Result<(), RenderError> {
+        let file = File::create(path)?;
+        let mut encoder = png::Encoder::new(BufWriter::new(file), w, h);
+        encoder.set_color(color);
+        encoder.set_depth(depth);
+        encoder.write_header()?.write_image_data(data)?;
+        Ok(())
+    }
+
     /// Renders `terrain` and writes it as a PNG file.
     pub fn save_png<P: AsRef<Path>>(
         terrain: &Terrain,
@@ -197,7 +355,7 @@ mod png_output {
 }
 
 #[cfg(feature = "png")]
-pub use png_output::{save_png, RenderError};
+pub use png_output::{save_layer_png, save_png, RenderError};
 
 #[cfg(test)]
 mod tests {

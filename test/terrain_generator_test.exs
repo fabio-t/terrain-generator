@@ -12,6 +12,48 @@ defmodule TerrainGeneratorTest do
     assert byte_size(terrain.flow) == 64 * 32 * 4
     assert byte_size(terrain.rivers) == 64 * 32
     assert byte_size(terrain.lakes) == 64 * 32
+    assert byte_size(terrain.ocean) == 64 * 32
+    assert byte_size(terrain.flow_accumulation) == 64 * 32 * 4
+  end
+
+  test "ocean is border-connected sea, and lakes are never ocean" do
+    {:ok, terrain} = TerrainGenerator.generate(width: 96, height: 96, seed: 3)
+
+    assert Terrain.ocean?(terrain, 0, 0), "map corner should be sea"
+
+    for y <- 0..95, x <- 0..95, Terrain.lake?(terrain, x, y) do
+      refute Terrain.ocean?(terrain, x, y)
+    end
+  end
+
+  test "raw flow accumulation is at least one cell everywhere" do
+    {:ok, terrain} = TerrainGenerator.generate(width: 48, height: 48, seed: 4)
+
+    for y <- 0..47, x <- 0..47 do
+      assert Terrain.flow_accumulation_at(terrain, x, y) >= 1.0
+    end
+  end
+
+  test "archipelago mode is accepted and differs from a single island" do
+    opts = [width: 96, height: 96, seed: 5]
+    {:ok, single} = TerrainGenerator.generate(opts)
+    {:ok, many} = TerrainGenerator.generate(opts ++ [archipelago: 4])
+
+    refute single.heightmap == many.heightmap
+    assert byte_size(many.heightmap) == 96 * 96 * 4
+  end
+
+  test "absolute river threshold and basin breaching are accepted" do
+    {:ok, terrain} =
+      TerrainGenerator.generate(
+        width: 96,
+        height: 96,
+        seed: 6,
+        river_min_upstream: 200,
+        breach_basins: 0.002
+      )
+
+    assert byte_size(terrain.rivers) == 96 * 96
   end
 
   test "generation is deterministic for a seed" do
@@ -71,6 +113,14 @@ defmodule TerrainGeneratorTest do
 
     assert_raise ArgumentError, ~r/rivers/, fn ->
       TerrainGenerator.generate(rivers: 2.0)
+    end
+
+    assert_raise ArgumentError, ~r/archipelago/, fn ->
+      TerrainGenerator.generate(archipelago: 0)
+    end
+
+    assert_raise ArgumentError, ~r/breach_basins/, fn ->
+      TerrainGenerator.generate(breach_basins: 5.0)
     end
   end
 

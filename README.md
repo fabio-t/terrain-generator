@@ -17,24 +17,30 @@ It is usable three ways:
 - as an **Elixir library** via a Rustler NIF (`mix` dependency).
 
 Generation is fully deterministic: the same seed and parameters always
-produce the same terrain, from every entry point. A 512×512 map generates
-in about half a second, 1024×1024 in about two.
+produce the same terrain, from every entry point. It is single-threaded
+and erosion dominates the cost: on a typical desktop core, expect roughly
+a second for a 512×512 map and a few seconds for 1024×1024. Lower
+`--droplets` for faster previews.
 
 ## Pipeline
 
 1. **Base heightmap** — fractal (fBm) OpenSimplex noise from the
    [`noise`](https://crates.io/crates/noise) crate.
-2. **Island mask** — radial falloff, perturbed by a secondary noise field
-   for natural coastlines.
+2. **Land mask** — a single radial island, or an archipelago of several,
+   perturbed by a secondary noise field for natural coastlines.
 3. **Hydraulic erosion** — droplet simulation (Beyer 2015): rain droplets
    roll downhill, pick up sediment and deposit it on flats, carving
    valleys and drainage networks.
-4. **Hydrology** — priority-flood depression filling (Barnes et al. 2014)
+4. **Basin breaching** *(opt-in)* — cuts outlets through the rims of
+   oversized closed basins so they drain instead of becoming inland seas.
+5. **Hydrology** — priority-flood depression filling (Barnes et al. 2014)
    plus D8 flow accumulation; high-flow cells become rivers, filled
-   depressions become lakes.
+   depressions become lakes, and border-connected sea becomes the ocean
+   mask.
 
-The output is not just an image: you get the heightmap, a flow/moisture
-map, and river and lake masks as raw data for use in games or simulations.
+The output is not just an image: you get elevation, raw flow accumulation
+(upstream catchment per cell), and river, lake and ocean masks as separate
+raw layers for use in games or simulations.
 
 ## Installing the CLI
 
@@ -165,6 +171,33 @@ give smoother, softer relief.
 <td align="center"><img src="docs/options/octaves-4.png" width="240"><br><code>--octaves 4</code></td>
 </tr></table>
 
+### Archipelagos — `--archipelago`
+
+`--archipelago N` places N islands instead of one, with `--islands-size`,
+`--islands-spacing`, `--islands-spread` and `--islands-variation` to shape
+the group. Placement comes from the seed, so it is reproducible; the count
+is approximate, because neighbours can merge and coastline noise can split
+an island in two. Erosion and rivers work per landmass.
+
+<table><tr>
+<td align="center"><img src="docs/options/default.png" width="240"><br>single island (default)</td>
+<td align="center"><img src="docs/options/archipelago-5.png" width="240"><br><code>--archipelago 5</code></td>
+<td align="center"><img src="docs/options/archipelago-9.png" width="240"><br><code>--archipelago 9 --islands-size 0.22</code></td>
+</tr></table>
+
+### Draining big basins — `--breach-basins`
+
+Droplet erosion fills pits but cannot cut through a high rim, so large
+interior depressions survive and become inland seas. `--breach-basins F`
+carves an outlet from every closed basin bigger than fraction `F` of the
+map, along the path where water would wear through first, leaving valleys
+instead of lakes.
+
+<table><tr>
+<td align="center"><img src="docs/options/breach-off.png" width="240"><br>default (basins stay lakes)</td>
+<td align="center"><img src="docs/options/breach-on.png" width="240"><br><code>--breach-basins 0.002</code></td>
+</tr></table>
+
 ### Output style — `--grey`
 
 The shaded render is for looking at; the greyscale render is the raw
@@ -175,6 +208,21 @@ other tools.
 <td align="center"><img src="docs/options/default.png" width="240"><br>default (shaded)</td>
 <td align="center"><img src="docs/options/greyscale.png" width="240"><br><code>--grey</code></td>
 </tr></table>
+
+## Getting the data out — `--layers`
+
+One generation can emit every layer as its own file, for feeding into
+other tools:
+
+```sh
+terrain-generator --layers height,flow,rivers,lakes,ocean -o out/
+```
+
+This writes `map0_height.png`, `map0_flow.png` and so on. Elevation and
+flow are written as **16-bit** greyscale so nothing is lost to
+quantisation (8 bits would terrace the elevation); the masks are 8-bit
+black/white. `shaded` is also available as a layer name, and remains the
+default when `--layers` is not given.
 
 ## Rust library
 
@@ -199,7 +247,25 @@ let lake      = terrain.is_lake(100, 100);
 terrain.save_png("map.png", RenderStyle::Shaded)?;
 ```
 
+Consumers who run their own hydrology can call `.no_rivers()`: flow
+routing is skipped entirely and `heightmap` is the single source of truth.
+The `ocean` mask is still computed, so "sea or inland basin?" stays
+answerable without it.
+
 Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
+
+### Determinism and stored worlds
+
+The same seed and parameters always produce the same terrain. If you
+persist worlds **as seeds** and regenerate them on load, pin an exact tag
+or revision of this crate and commit your `Cargo.lock` — output depends on
+the `noise` crate and on tuning here, so any change to it is a breaking
+change for your saves.
+
+One exception to cross-platform bit-exactness: the normalised `flow` layer
+is computed with `f32::ln`, whose last-bit rounding can differ between
+platforms. `heightmap`, `flow_accumulation`, `rivers`, `lakes` and `ocean`
+use only IEEE-exact operations and are identical everywhere.
 
 ## Elixir library
 

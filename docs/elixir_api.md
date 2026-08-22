@@ -60,7 +60,14 @@ Raises `ArgumentError` on unknown option keys.
 | `:island` | `1.0` | Island diameter as a fraction of the shorter map dimension, `true` for the default, or `false` to let terrain reach the borders. |
 | `:coast_noise` | `1.0` | Coastline perturbation strength; `0` gives a round island. |
 | `:erosion` | `true` | `true` (one droplet per cell), `false` (skip erosion), or a positive integer droplet count. |
+| `:breach_basins` | `false` | Carve outlets from closed basins larger than this fraction of the map, so they drain instead of becoming inland seas. |
 | `:rivers` | `0.01` | Approximate fraction of land covered by rivers, `true` for the default, or `false` to disable rivers and lakes. |
+| `:river_min_upstream` | `false` | Absolute river threshold in cells of upstream catchment. Overrides `:rivers` when set — use it when cells have a fixed real-world size, since an area share does not transfer between map sizes. |
+| `:archipelago` | `false` | Number of islands to place instead of a single island. |
+| `:islands_size` | `0.35` | Mean island diameter for `:archipelago`, as a fraction of the shorter map side. |
+| `:islands_variation` | `0.35` | Per-island size variation for `:archipelago`. |
+| `:islands_spread` | `0.85` | How far island centres spread over the map. |
+| `:islands_spacing` | `0.22` | Minimum spacing between island centres (best-effort: neighbours may merge). |
 
 Every option is validated on the Elixir side before any native code runs;
 unknown keys and out-of-range values raise `ArgumentError` with a
@@ -81,8 +88,18 @@ human-readable reason string if the file cannot be written.
 | `:sea_level` | `float` | Sea level used for generation. |
 | `:heightmap` | `binary` | One 32-bit little-endian float per cell, elevation in `[0, 1]`. |
 | `:flow` | `binary` | One 32-bit little-endian float per cell, log-normalised flow accumulation in `[0, 1]` (a useful moisture proxy). |
+| `:flow_accumulation` | `binary` | One 32-bit little-endian float per cell, raw upstream catchment in cells. Size channels from this. |
 | `:rivers` | `binary` | One byte per cell, `1` where a river runs. |
 | `:lakes` | `binary` | One byte per cell, `1` where a lake holds standing water. |
+| `:ocean` | `binary` | One byte per cell, `1` where the cell is sea: at or below sea level **and** connected to the map border. |
+
+### Ocean vs. inland water
+
+`:ocean` is a flood fill from the map border, not an elevation test. A
+closed basin whose floor lies below sea level is a lake, not ocean —
+which is what you want when modelling salinity or drinkability. Build
+water classification on `ocean?/3` and `lake?/3`, not on comparing
+`height_at/3` to `sea_level`.
 
 All buffers are row-major, indexed as `y * width + x`. They are plain BEAM
 binaries: cheap to pass between processes (stored off-heap and
@@ -94,12 +111,14 @@ a GPU/scenegraph on the client.
 ```elixir
 alias TerrainGenerator.Terrain
 
-Terrain.height_at(terrain, x, y)   # float in [0, 1]
-Terrain.flow_at(terrain, x, y)     # float in [0, 1]
-Terrain.river?(terrain, x, y)      # boolean
-Terrain.lake?(terrain, x, y)       # boolean
-Terrain.water?(terrain, x, y)      # sea, lake or river
-Terrain.heightmap_list(terrain)    # [float], row by row (small maps only)
+Terrain.height_at(terrain, x, y)             # float in [0, 1]
+Terrain.flow_at(terrain, x, y)               # float in [0, 1]
+Terrain.flow_accumulation_at(terrain, x, y)  # upstream cells
+Terrain.river?(terrain, x, y)                # boolean
+Terrain.lake?(terrain, x, y)                 # boolean
+Terrain.ocean?(terrain, x, y)                # boolean
+Terrain.water?(terrain, x, y)                # ocean, lake or river
+Terrain.heightmap_list(terrain)              # [float], row by row (small maps only)
 ```
 
 ### Working with the binaries directly
@@ -124,6 +143,33 @@ terrain.rivers
 |> :binary.matches(<<1>>)
 |> length()
 ```
+
+## Archipelagos
+
+    {:ok, terrain} = TerrainGenerator.generate(seed: 3, archipelago: 5)
+
+Island placement is derived from the seed on its own RNG stream, so
+turning this on cannot change the output of a single-island generation
+with the same seed. The count is approximate: neighbouring islands can
+overlap into one landmass, and coastline noise can split one in two.
+Raise `:islands_spacing` or lower `:islands_size` to separate them.
+
+Erosion and hydrology are unaffected by the mask — each landmass drains
+on its own, and the water between islands stays ocean.
+
+## Determinism and stored worlds
+
+The same seed and options always produce the same terrain. If you
+regenerate a world from a stored seed (rather than storing the terrain
+itself), pin an exact revision of this package: output depends on the
+`noise` crate and on tuning inside the generator, so treat any change to
+it as breaking for your saves.
+
+One layer is exempt from cross-platform bit-exactness: `:flow` is
+log-normalised with a transcendental whose last-bit rounding can differ
+between platforms. `:heightmap`, `:flow_accumulation`, `:rivers`,
+`:lakes` and `:ocean` use only exact operations. Derive moisture from
+`:flow_accumulation` if you need identical results on every machine.
 
 ## Concurrency
 

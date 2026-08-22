@@ -29,6 +29,10 @@ noise = "0.9"
 png = { version = "0.18", optional = true }
 clap = { version = "4", features = ["derive"], optional = true }
 
+[dev-dependencies]
+# decoding written layers back in the integration tests
+png = "0.18"
+
 [features]
 default = ["cli"]
 # PNG file output (Terrain::save_png); to_rgb works without it.

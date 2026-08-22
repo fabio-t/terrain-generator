@@ -45,6 +45,17 @@ defmodule TerrainGenerator do
     * `:rivers` — approximate fraction of land covered by rivers, `true`
       for the default density, or `false` to disable rivers and lakes
       (default `0.01`)
+    * `:river_min_upstream` — absolute river threshold in cells of upstream
+      catchment; overrides `:rivers` when set (default `false`)
+    * `:archipelago` — number of islands to place instead of a single
+      island, or `false` for one island (default `false`)
+    * `:islands_size`, `:islands_variation`, `:islands_spread`,
+      `:islands_spacing` — archipelago island size, per-island size
+      variation, how far centres spread, and minimum centre spacing
+      (defaults `0.35`, `0.35`, `0.85`, `0.22`)
+    * `:breach_basins` — carve outlets from closed basins larger than this
+      fraction of the map so they drain instead of becoming inland seas,
+      or `false` (default `false`)
 
   All options are validated; invalid values raise `ArgumentError` with a
   descriptive message before any native code runs.
@@ -63,8 +74,15 @@ defmodule TerrainGenerator do
     persistence: 0.5,
     island: 1.0,
     coast_noise: 1.0,
+    archipelago: false,
+    islands_size: 0.35,
+    islands_variation: 0.35,
+    islands_spread: 0.85,
+    islands_spacing: 0.22,
     erosion: true,
-    rivers: 0.01
+    breach_basins: false,
+    rivers: 0.01,
+    river_min_upstream: false
   }
 
   @type option ::
@@ -78,8 +96,15 @@ defmodule TerrainGenerator do
           | {:persistence, number()}
           | {:island, number() | boolean()}
           | {:coast_noise, number()}
+          | {:archipelago, pos_integer() | false}
+          | {:islands_size, number()}
+          | {:islands_variation, number()}
+          | {:islands_spread, number()}
+          | {:islands_spacing, number()}
           | {:erosion, boolean() | pos_integer()}
+          | {:breach_basins, number() | false}
           | {:rivers, number() | boolean()}
+          | {:river_min_upstream, number() | false}
 
   @doc """
   Generates a terrain and returns `{:ok, %TerrainGenerator.Terrain{}}`.
@@ -94,17 +119,19 @@ defmodule TerrainGenerator do
   def generate(opts \\ []) do
     native_opts = native_options(opts)
 
-    {:ok, {width, height, heightmap, flow, rivers, lakes}} = Native.generate(native_opts)
+    {:ok, layers} = Native.generate(native_opts)
 
     {:ok,
      %Terrain{
-       width: width,
-       height: height,
+       width: layers.width,
+       height: layers.height,
        sea_level: native_opts.sea_level,
-       heightmap: heightmap,
-       flow: flow,
-       rivers: rivers,
-       lakes: lakes
+       heightmap: layers.heightmap,
+       flow: layers.flow,
+       flow_accumulation: layers.flow_accumulation,
+       rivers: layers.rivers,
+       lakes: layers.lakes,
+       ocean: layers.ocean
      }}
   end
 
@@ -149,10 +176,47 @@ defmodule TerrainGenerator do
       persistence: validate_pos_number(:persistence, merged.persistence),
       island: validate_island(merged.island),
       coast_noise: validate_number(:coast_noise, merged.coast_noise, 0.0, 100.0),
+      archipelago: validate_archipelago(merged.archipelago),
+      islands_size: validate_pos_number(:islands_size, merged.islands_size),
+      islands_variation: validate_number(:islands_variation, merged.islands_variation, 0.0, 1.0),
+      islands_spread: validate_number(:islands_spread, merged.islands_spread, 0.0, 1.0001),
+      islands_spacing: validate_number(:islands_spacing, merged.islands_spacing, 0.0, 100.0),
       droplets: validate_erosion(merged.erosion),
-      rivers: validate_rivers(merged.rivers)
+      breach: validate_optional_fraction(:breach_basins, merged.breach_basins),
+      rivers: validate_rivers(merged.rivers),
+      river_min_upstream: validate_optional_cells(merged.river_min_upstream)
     }
   end
+
+  defp validate_archipelago(false), do: 0
+  defp validate_archipelago(n) when is_integer(n) and n > 0, do: n
+
+  defp validate_archipelago(v),
+    do:
+      raise(
+        ArgumentError,
+        "archipelago must be a positive island count or false, got: #{inspect(v)}"
+      )
+
+  defp validate_optional_fraction(_key, false), do: 0.0
+  defp validate_optional_fraction(_key, v) when is_number(v) and v > 0 and v <= 1, do: v * 1.0
+
+  defp validate_optional_fraction(key, v),
+    do:
+      raise(
+        ArgumentError,
+        "#{key} must be a number in (0, 1] or false, got: #{inspect(v)}"
+      )
+
+  defp validate_optional_cells(false), do: 0.0
+  defp validate_optional_cells(v) when is_number(v) and v > 0, do: v * 1.0
+
+  defp validate_optional_cells(v),
+    do:
+      raise(
+        ArgumentError,
+        "river_min_upstream must be a positive number of cells or false, got: #{inspect(v)}"
+      )
 
   defp validate_pos_int(_key, v) when is_integer(v) and v > 0, do: v
 

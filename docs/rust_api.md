@@ -64,11 +64,22 @@ default and can be disabled individually.
    descent, and cells above a flow-accumulation threshold become rivers.
    Filled depressions deeper than a small epsilon become lakes.
 
-Generation is **fully deterministic**: the same seed and parameters always
-produce the same terrain, on every platform. One caveat: the base noise
-comes from the `noise` crate, so upgrading that dependency across breaking
-versions may change the generated terrain — pin versions (commit
-`Cargo.lock`) if you rely on stable worlds.
+Generation is **deterministic**: the same seed and parameters always
+produce the same terrain. Ordering that could otherwise vary — the
+flow-routing sort and both priority queues — is broken by cell index, so
+no result depends on sort or heap internals.
+
+Two caveats matter if you persist worlds as seeds:
+
+* **Pin the version.** Output depends on the `noise` crate and on tuning
+  inside this crate. Depend on an exact tag or revision, commit your
+  `Cargo.lock`, and treat any output change as breaking on your side.
+* **`flow` uses `f32::ln`,** whose last-bit rounding is not guaranteed
+  identical across platforms and libm implementations. Every other layer
+  — heightmap, `flow_accumulation`, rivers, lakes, ocean — uses only
+  IEEE-exact operations (`+ - * /`, `sqrt`, comparisons) and is
+  reproducible bit-for-bit everywhere. Derive moisture from
+  `flow_accumulation` if you need cross-platform exactness.
 
 ## Types
 
@@ -84,17 +95,55 @@ different seeds via `.seed(n)`).
 | `.seed(u32)` | `0` | Generation seed. |
 | `.sea_level(f32)` | `0.08` | Sea level in `[0, 1)`. |
 | `.noise(NoiseParams)` | see below | Fractal noise parameters. |
-| `.island(IslandParams)` / `.no_island()` | enabled | Island shaping. |
+| `.island(IslandParams)` / `.no_island()` | enabled | Single-island shaping. |
+| `.archipelago(ArchipelagoParams)` | off | Several islands instead of one; replaces `.island()`. |
 | `.erosion(ErosionParams)` / `.no_erosion()` | enabled | Hydraulic erosion. |
+| `.breach_basins(BreachParams)` / `.no_breach()` | off | Carve outlets from oversized closed basins. |
 | `.rivers(RiverParams)` / `.no_rivers()` | enabled | Flow routing, rivers and lakes. |
-| `.generate()` | — | Validates all parameters, runs the pipeline, returns a `Terrain`. |
+| `.generate()` | — | Validates all parameters, runs the pipeline, returns a `Terrain`. Panics on invalid parameters. |
+| `.try_generate()` | — | Same, but returns `Result<Terrain, ParamError>`. |
 
-All validation happens in `generate()`, which **panics with a descriptive
-message** on out-of-range parameters (zero dimensions, sea level outside
-`[0, 1)`, non-positive noise values, erosion rates outside their unit
-ranges, river density outside `[0, 1]`). Out-of-range configuration is
-treated as a programmer error; validate untrusted input before passing it
-in — the Elixir bindings do exactly that on their side of the boundary.
+All validation happens when generating. `generate()` **panics with a
+descriptive message** on out-of-range parameters, treating them as a
+programmer error. When the parameters come from user input — a config
+file, a web form, a game's world-creation screen — use `try_generate()`
+instead:
+
+```rust
+use terrain_generator::Terrain;
+
+match Terrain::builder().sea_level(user_value).try_generate() {
+    Ok(terrain) => { /* ... */ }
+    Err(e) => eprintln!("bad configuration: {e} (parameter: {})", e.param),
+}
+```
+
+`ParamError` exposes `param` (a stable `&'static str` naming the
+offending parameter) and `message`, and implements `std::error::Error`.
+
+## Heightmap-only generation
+
+Consumers running their own hydrology should call `.no_rivers()`. This is
+a supported first-class path, not a degraded mode: depression filling,
+flow routing and river extraction are skipped entirely, and
+`flow`/`flow_accumulation`/`rivers`/`lakes` come back all-zero.
+
+```rust
+use terrain_generator::Terrain;
+
+let terrain = Terrain::builder()
+    .size(1024, 1024)
+    .seed(seed)
+    .no_rivers()
+    .generate();
+
+let elevation: &[f32] = terrain.heightmap.as_slice(); // row-major, [0, 1]
+```
+
+The `ocean` mask is still computed — it is a linear-time flood fill over
+the heightmap rather than hydrology — so "sea or inland basin?" stays
+answerable. The heightmap is bit-identical whether hydrology runs or not;
+hydrology never feeds back into elevation.
 
 ### `NoiseParams`
 
@@ -136,6 +185,52 @@ The defaults work well for maps between 256² and 2048²; usually only
 |-------|---------|-------------|
 | `density: f32` | `0.01` | Approximate fraction of land cells covered by rivers. |
 
+### `ArchipelagoParams`
+
+Several islands instead of one. Placement comes from the seed on its own
+RNG stream, so enabling archipelago mode cannot change any single-island
+or mask-less output.
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `islands: usize` | `5` | How many islands to place. |
+| `size: f32` | `0.35` | Mean island diameter as a fraction of the shorter map side. |
+| `size_variation: f32` | `0.35` | Per-island size variation, in `[0, 1)`. |
+| `spread: f32` | `0.85` | How much of the map centres may spread over, in `[0, 1]`. |
+| `min_spacing: f32` | `0.22` | Minimum centre spacing as a fraction of the shorter map side (best-effort). |
+| `coast_noise: f32` | `1.0` | Coastline perturbation, as for a single island. |
+
+The mask is the union of per-island radial falloffs — the single-island
+formula with `d³` replaced by the *nearest* island's `d³` — so islands
+are shaped exactly like single islands and the coastline noise is applied
+once, globally.
+
+**Why not a noise threshold?** Thresholding a noise field gives organic
+chains but no control: the island count falls out of the noise and jumps
+around with small parameter changes. Explicit radial falloffs keep
+`islands` and `size` as real controls. The trade-off is that neighbours
+can overlap into one landmass, so the count is approximate — raise
+`min_spacing` or lower `size` to separate them.
+
+Erosion and hydrology need no changes for this: each landmass gets its
+own drainage, and the water between islands stays ocean.
+
+### `BreachParams`
+
+Opt-in stage between erosion and hydrology. Droplet erosion deposits into
+pits but cannot cut a rim tens of metres high, so large interior
+depressions survive and become inland seas once depressions are filled.
+Breaching finds each oversized basin's **minimax path** out — the path
+whose highest cell is lowest, i.e. where water would wear through first —
+and carves it into a channel descending from the basin floor to the exit.
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `max_lake_fraction: f32` | `0.005` | Largest closed basin, as a fraction of map cells, that may remain a lake. |
+
+A basin whose floor is lower than every reachable cell has nowhere to
+drain to and is left alone. Carving only ever lowers terrain.
+
 ### `Grid<T>`
 
 Every per-cell buffer is a `Grid<T>`: a dense, row-major 2D grid indexed
@@ -150,13 +245,28 @@ FFI or GPU hand-off), `into_vec()`, `iter()`, and `idx(x, y)` /
 |-------|------|-------------|
 | `sea_level` | `f32` | The sea level the terrain was generated with. |
 | `heightmap` | `Grid<f32>` | Elevation per cell, in `[0, 1]`. |
-| `flow` | `Grid<f32>` | Log-normalised flow accumulation in `[0, 1]`; a useful moisture proxy for biome placement. |
-| `rivers` | `Grid<u8>` | `1` where a river runs. Rivers are continuous from source to sea (or to a lake). |
+| `flow_accumulation` | `Grid<f32>` | Raw upstream catchment per cell, in cells (each contributes 1). Size channels from this — width typically scales with √catchment. |
+| `flow` | `Grid<f32>` | `flow_accumulation` log-normalised to `[0, 1]`; the more useful form as a moisture proxy. |
+| `rivers` | `Grid<u8>` | `1` where a river runs. Continuous from source to sea or to a lake. |
 | `lakes` | `Grid<u8>` | `1` where an inland depression holds standing water. |
+| `ocean` | `Grid<u8>` | `1` where the cell is at or below sea level **and** connected to the map border. |
 
 Convenience accessors: `width()`, `height()`, `height_at(x, y)`,
-`flow_at(x, y)`, `is_river(x, y)`, `is_lake(x, y)`, `is_water(x, y)`
-(sea, lake or river).
+`flow_at(x, y)`, `flow_accumulation_at(x, y)`, `is_river(x, y)`,
+`is_lake(x, y)`, `is_ocean(x, y)`, `is_water(x, y)` (the union of the
+three water masks).
+
+### Ocean vs. inland water
+
+`ocean` is a flood fill from the map border across cells at or below sea
+level, **not** an elevation test. A closed basin whose floor lies below
+sea level is therefore *not* ocean: it is a lake. This matters for
+anything modelling salinity, drinkability or navigability — an elevation
+test alone silently calls such a basin sea.
+
+`is_water` is the union of the three masks, so it never makes that
+mistake. If you classify water yourself, build on `ocean`/`lakes` rather
+than on `height_at(..) <= sea_level`.
 
 ### Rendering
 
@@ -166,15 +276,33 @@ Convenience accessors: `width()`, `height()`, `height_at(x, y)`,
 | `RenderStyle::Greyscale` | Plain heightmap, black = 0 to white = 1. |
 | `Terrain::to_rgb(style) -> Vec<u8>` | Row-major `width * height * 3` RGB buffer — feed it to any image or texture API. Always available. |
 | `Terrain::save_png(path, style) -> Result<(), RenderError>` | Renders and writes a PNG. Requires the `png` feature. |
+| `Terrain::save_layer_png(layer, path)` | Writes one `Layer` as a PNG. Requires the `png` feature. |
+
+### Layers
+
+`Layer` selects one output layer for file export: `Shaded`, `Height`,
+`Flow`, `Rivers`, `Lakes`, `Ocean`. `Shaded` is a picture; the rest are
+data, written losslessly — elevation and flow as **16-bit** greyscale
+(8 bits would quantise elevation into visible terraces), masks as 8-bit
+black/white. `Layer` implements `Display` and `FromStr` (lowercase names)
+so it round-trips through CLI arguments and config files.
 
 `RenderError` wraps the underlying I/O or PNG encoding error and
 implements `std::error::Error`.
 
 ## Performance
 
-Indicative single-threaded timings (release build): a full 512² map with
-default settings generates in ~0.5 s, 1024² in ~2 s. Erosion dominates;
-lower `droplets` for faster previews.
+Single-threaded, release build. Erosion dominates: on one desktop core a
+default 1024² map takes a few seconds, of which roughly three quarters is
+the droplet simulation and well under a tenth is hydrology (flow routing,
+ocean/lake/river extraction). A 512² map is around a quarter of that.
+Treat these as orders of magnitude, not benchmarks — they vary several-fold
+across machines.
+
+To speed things up: lower `ErosionParams::droplets` (the single biggest
+lever), or use `no_erosion()` for layout previews. `no_rivers()` saves
+comparatively little, so choose it for correctness reasons — bringing your
+own hydrology — rather than for speed.
 
 ## Full example
 
