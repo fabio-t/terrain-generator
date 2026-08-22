@@ -85,6 +85,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/download-artifact@v8
         with:
           path: dist
@@ -94,9 +96,41 @@ jobs:
         working-directory: dist
         run: sha256sum terrain-generator-* > SHA256SUMS.txt
 
+      # Use the hand-written CHANGELOG entry as the release body, so a
+      # release says what changed rather than only listing commits. A
+      # pre-release tag (v1.2.3-rc1) falls back to its base version's
+      # section, and a missing section is a warning rather than a failure:
+      # the binaries are already built by this point.
+      - name: Extract release notes from the CHANGELOG
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          base="${version%%-*}"
+
+          extract() {
+            awk -v v="$1" '
+              index($0, "## " v) == 1 { found = 1; next }
+              found && index($0, "## ") == 1 { exit }
+              found { print }
+            ' CHANGELOG.md
+          }
+
+          extract "$version" > notes.md
+          if [ ! -s notes.md ]; then
+            extract "$base" > notes.md
+          fi
+          if [ ! -s notes.md ]; then
+            echo "::warning::no CHANGELOG section for $version; \
+              falling back to generated notes only"
+            : > notes.md
+          fi
+          cat notes.md
+
       - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           # a hyphen in the tag (v0.1.5-rc3) marks a semver pre-release
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body_path: notes.md
+          # commit list is appended below the CHANGELOG text
           generate_release_notes: true
