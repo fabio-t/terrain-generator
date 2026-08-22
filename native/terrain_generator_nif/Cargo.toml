@@ -2,7 +2,7 @@
 name = "terrain_generator_nif"
 version = "0.2.0"
 edition = "2021"
-rust-version = "1.91"  # required by rustler 0.38
+rust-version.workspace = true
 license = "Apache-2.0"
 authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
 description = "Rustler NIF bindings for the terrain-generator crate"

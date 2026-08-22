@@ -7,7 +7,7 @@ with `cargo doc --open`.
 
 ## Installation
 
-From a git dependency:
+Requires Rust 1.91 or newer. From a git dependency:
 
 ```toml
 [dependencies]

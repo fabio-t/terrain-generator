@@ -56,7 +56,7 @@ checksums.
 
 ### With cargo
 
-Requires a [Rust toolchain](https://rustup.rs) (1.85 or newer):
+Requires a [Rust toolchain](https://rustup.rs) (1.91 or newer):
 
 ```sh
 cargo install --git https://github.com/fabio-t/terrain-generator terrain-generator

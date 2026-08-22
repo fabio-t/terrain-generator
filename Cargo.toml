@@ -1,11 +1,16 @@
 [workspace]
 members = [".", "native/terrain_generator_nif"]
 
+[workspace.package]
+# Minimum supported Rust version for every crate here.
+# Currently set by rustler 0.38, which the Elixir NIF depends on.
+rust-version = "1.91"
+
 [package]
 name = "terrain-generator"
 version = "0.2.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version.workspace = true
 license = "Apache-2.0"
 authors = ["Fabio Ticconi <fabio.ticconi@gmail.com>"]
 description = "Procedural terrain generator: fractal noise, hydraulic erosion and river extraction"

@@ -32,6 +32,17 @@ jobs:
       - name: Test (png feature only)
         run: cargo test --lib --no-default-features --features png
 
+      # keeps the declared rust-version honest: bump it here if this fails
+      - name: Verify MSRV (rust-version in Cargo.toml)
+        run: |
+          MSRV=$(cargo metadata --format-version 1 --no-deps | python3 -c "
+          import json, sys
+          vs = [p['rust_version'] for p in json.load(sys.stdin)['packages'] if p.get('rust_version')]
+          print(max(vs, key=lambda v: tuple(int(x) for x in v.split('.'))))")
+          echo "declared MSRV: $MSRV"
+          rustup toolchain install "$MSRV" --profile minimal
+          cargo +"$MSRV" check --workspace --locked
+
   elixir:
     name: Elixir
     runs-on: ubuntu-latest
