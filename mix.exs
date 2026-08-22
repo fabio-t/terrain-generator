@@ -26,8 +26,8 @@ defmodule TerrainGenerator.MixProject do
 
   defp deps do
     [
-      {:rustler, "~> 0.36"},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:rustler, "~> 0.38"},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false}
     ]
   end
 

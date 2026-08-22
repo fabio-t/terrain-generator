@@ -19,6 +19,8 @@ Complete rewrite in Rust, replacing the original Java implementation.
   every platform.
 - Cargo features: `png` (PNG output) and `cli` (binary); library
   consumers can depend with `default-features = false`.
+- Toolchain floors: the library and CLI need Rust 1.85; the Elixir NIF
+  crate needs Rust 1.91 (required by Rustler 0.38).
 
 ## 0.1.1
 

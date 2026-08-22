@@ -18,8 +18,11 @@ end
 ```
 
 **Requirements:** a Rust toolchain (`cargo`) must be available at compile
-time — Rustler builds the NIF as part of `mix compile`. Erlang/OTP 24+ and
-Elixir ~> 1.15.
+time — Rustler builds the NIF as part of `mix compile`. Rust 1.91+ (required
+by Rustler 0.38), Erlang/OTP 24+ and Elixir ~> 1.15.
+
+The CLI and the Rust library itself only need Rust 1.85; the higher floor
+applies to the NIF crate.
 
 ## Quick start
 

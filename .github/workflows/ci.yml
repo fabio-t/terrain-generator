@@ -1,9 +1,12 @@
 name: CI
 
+# Pushes to the default branch run CI automatically. Everything else —
+# pull requests included — is run on demand from the Actions tab
+# ("Run workflow", pick any branch), to keep Actions minutes down.
 on:
   push:
-    branches: [master, main]
-  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,7 +16,7 @@ jobs:
     name: Rust
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -33,13 +36,13 @@ jobs:
     name: Elixir
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27"
-          elixir-version: "1.17"
+          otp-version: "29"
+          elixir-version: "1.20"
       - name: Fetch dependencies
         run: mix deps.get
       - name: Check formatting

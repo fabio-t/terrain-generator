@@ -204,8 +204,8 @@ Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
 ## Elixir library
 
 The repository is also a Mix package wrapping the same Rust core through
-[Rustler](https://hexdocs.pm/rustler). Erlang/OTP 24+, Elixir 1.15+ and a
-Rust toolchain are required at compile time.
+[Rustler](https://hexdocs.pm/rustler). Erlang/OTP 24+, Elixir 1.15+ and
+Rust 1.91+ (required by Rustler 0.38) are needed at compile time.
 
 ```elixir
 def deps do
@@ -235,7 +235,10 @@ cargo clippy --workspace   # lints
 mix test                   # Elixir tests (needs Elixir + Rust)
 ```
 
-CI runs formatting, clippy and both test suites on every push. Releases
+CI (formatting, clippy, both test suites) runs automatically on pushes
+to `main`, and on demand for any other branch via **Run workflow** on
+the [Actions tab](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml)
+— pull requests are not built automatically. Releases
 are cut by pushing a tag: `v1.2.3` publishes a release with binaries for
 Linux, macOS and Windows attached; a pre-release tag like `v1.2.3-rc1`
 publishes a GitHub pre-release.
