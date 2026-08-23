@@ -30,6 +30,11 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
   native libraries, verify the loader on each platform's own runner, and
   attach `terrain-generator-<version>.jar` alongside the CLI archives.
 
+- The release workflow can now be run manually from the Actions tab. Such
+  a run builds and tests every artefact a release would carry but stops
+  short of publishing one, so the packaging can be exercised on a branch
+  without burning a tag.
+
 No change to generated terrain, and none to the Rust or Elixir libraries:
 this release touches only `java/` and the release workflow.
 

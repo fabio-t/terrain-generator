@@ -11,12 +11,19 @@ on:
       # publish nothing at all, silently
       - "v*"
       - "[0-9]*"
+  # Manual runs build and test every artefact but stop short of publishing
+  # (see the release job's condition), so the packaging can be exercised on
+  # a branch without burning a tag.
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
+  # A branch name can contain slashes, which would be an illegal filename,
+  # so only tag runs name artefacts after the ref.
+  RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
 jobs:
   test:
@@ -62,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          name="terrain-generator-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          name="terrain-generator-${RELEASE_VERSION}-${{ matrix.target }}"
           mkdir "$name"
           if [[ "${{ matrix.target }}" == *windows* ]]; then
             cp "target/${{ matrix.target }}/release/terrain-generator.exe" "$name/"
@@ -189,7 +196,7 @@ jobs:
       # One jar carrying every platform's library, so a Java consumer needs
       # no Rust toolchain and nothing to install.
       - name: Build the jar
-        run: bash java/package-jar.sh "${GITHUB_REF_NAME#v}" natives
+        run: bash java/package-jar.sh "${RELEASE_VERSION#v}" natives
 
       # Proves the release artifact itself loads its bundled library, with
       # nothing on the library search path to fall back to. This runner can
@@ -198,7 +205,7 @@ jobs:
       - name: Smoke-test the packaged jar
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_VERSION#v}"
           jar="java/out/terrain-generator-$version.jar"
           mkdir -p java/out/test
           javac --release 22 -cp "$jar" -d java/out/test java/TerrainGeneratorTest.java
@@ -214,6 +221,9 @@ jobs:
   release:
     name: Publish release
     needs: [build, jar]
+    # Only a tag publishes. A manual run stops here, having still built and
+    # tested every artefact the release would have carried.
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -243,7 +253,7 @@ jobs:
       - name: Extract release notes from the CHANGELOG
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_VERSION#v}"
           base="${version%%-*}"
 
           extract() {
