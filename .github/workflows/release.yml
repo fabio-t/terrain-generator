@@ -78,23 +78,158 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.target }}
+          name: cli-${{ matrix.target }}
           path: |
             terrain-generator-*.tar.gz
             terrain-generator-*.zip
           if-no-files-found: error
 
-  release:
-    name: Publish release
-    needs: build
+  natives:
+    name: Native library ${{ matrix.platform }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Deliberately gnu rather than the musl target the CLI uses: this
+          # library is dlopen'd into a JVM process, which on Linux is a
+          # glibc process, and mixing two libcs in one address space is not
+          # something to ship. The runner is pinned a release behind so the
+          # glibc a consumer needs stays 2.35 rather than 2.39.
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            platform: linux-x86_64
+            lib: libterrain_generator_ffi.so
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            platform: macos-x86_64
+            lib: libterrain_generator_ffi.dylib
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            platform: macos-aarch64
+            lib: libterrain_generator_ffi.dylib
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            platform: windows-x86_64
+            lib: terrain_generator_ffi.dll
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi-${{ matrix.target }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Build
+        run: cargo build --release --locked -p terrain_generator_ffi --target ${{ matrix.target }}
+
+      - name: Stage under its platform directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "natives/${{ matrix.platform }}"
+          cp "target/${{ matrix.target }}/release/${{ matrix.lib }}" \
+             "natives/${{ matrix.platform }}/"
+
+      # Pack a single-platform jar and run the binding tests out of it,
+      # with nothing on the library search path. This is the only place
+      # the loader's os.name/os.arch mapping is exercised on a real macOS
+      # or Windows machine — get it wrong and the released jar would fail
+      # on the consumer's machine, not here.
+      # Skipped for macos-x86_64 alone: the macOS runners are Apple
+      # Silicon, so that one is a cross-build and its dylib cannot be
+      # loaded here. Its sibling macos-aarch64 covers the same code path
+      # on the same OS.
+      - name: Verify the loader finds the bundled library
+        if: matrix.platform != 'macos-x86_64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="java/out/terrain-generator-smoke.jar"
+          if [[ "${{ matrix.platform }}" == windows-* ]]; then sep=";"; else sep=":"; fi
+          bash java/package-jar.sh smoke natives
+          mkdir -p java/out/test
+          javac --release 22 -cp "$jar" -d java/out/test java/TerrainGeneratorTest.java
+          java --enable-native-access=ALL-UNNAMED \
+               -cp "$jar$sep"java/out/test TerrainGeneratorTest
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.platform }}
+          path: natives
+          if-no-files-found: error
+
+  jar:
+    name: Package the Java bindings
+    needs: natives
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
       - uses: actions/download-artifact@v8
         with:
+          pattern: native-*
+          path: natives
+          merge-multiple: true
+
+      # One jar carrying every platform's library, so a Java consumer needs
+      # no Rust toolchain and nothing to install.
+      - name: Build the jar
+        run: bash java/package-jar.sh "${GITHUB_REF_NAME#v}" natives
+
+      # Proves the release artifact itself loads its bundled library, with
+      # nothing on the library search path to fall back to. This runner can
+      # only exercise linux-x86_64; each of the other three was checked on
+      # its own runner in the natives job above.
+      - name: Smoke-test the packaged jar
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          jar="java/out/terrain-generator-$version.jar"
+          mkdir -p java/out/test
+          javac --release 22 -cp "$jar" -d java/out/test java/TerrainGeneratorTest.java
+          java --enable-native-access=ALL-UNNAMED \
+               -cp "$jar:java/out/test" TerrainGeneratorTest
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: jar
+          path: java/out/*.jar
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [build, jar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Named patterns rather than "everything": the per-platform native
+      # artifacts are build inputs for the jar, not release assets.
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: cli-*
           path: dist
           merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: jar
+          path: dist
 
       - name: Generate checksums
         working-directory: dist

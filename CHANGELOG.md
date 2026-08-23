@@ -7,6 +7,32 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
+## Unreleased
+
+### Java
+
+- The released jar now carries a **native library for every supported
+  platform** inside it (`natives/<os>-<arch>/`), so a Java consumer needs
+  no Rust toolchain and nothing to install — the pattern sqlite-jdbc and
+  LWJGL use. Linux x86-64 (glibc 2.35+), macOS on Apple Silicon and Intel,
+  and Windows x86-64 are covered.
+- `TerrainGenerator` gained a third and final step in its library search:
+  after the `tergen.library` property and the default library search path,
+  it extracts the bundled copy for the running platform to a private
+  temporary directory and loads that. A locally built library still wins,
+  and a jar/native mismatch is still caught at class-init by the existing
+  ABI-version check.
+- The bindings are compiled with `--release 22`, so the jar loads on any
+  Java 22 or newer runtime regardless of which JDK built it.
+- `java/build.sh` now also packs the jar and runs the binding tests a
+  second time against it with nothing on the library search path, so the
+  extraction path cannot regress unnoticed. Tagged releases build the four
+  native libraries, verify the loader on each platform's own runner, and
+  attach `terrain-generator-<version>.jar` alongside the CLI archives.
+
+No change to generated terrain, and none to the Rust or Elixir libraries:
+this release touches only `java/` and the release workflow.
+
 ## 0.2.0 — 2026-08-22
 
 Complete rewrite in Rust, replacing the original Java implementation. The
