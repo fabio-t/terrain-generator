@@ -7,7 +7,7 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
-## Unreleased
+## 0.2.1 — 2026-08-23
 
 ### Java
 
