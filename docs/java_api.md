@@ -15,30 +15,38 @@ and Zig — the Java layer is then pure Java with zero dependencies.
 ## Requirements
 
 * **JDK 22 or newer.** The FFM API was finalised in Java 22; in 21 it is a
-  preview API and these sources will not compile.
-* A Rust toolchain, to build the native library.
+  preview API and these sources will not compile. The released jar is
+  compiled with `--release 22`, so a Java 22 runtime can load it even
+  though CI builds it on a newer JDK.
+* A Rust toolchain **only if you build from source** — the released jar
+  needs none.
 
-## Building
+## Using the released jar
+
+Every release attaches `terrain-generator-<version>.jar`. It contains the
+bindings *and* a prebuilt native library for each supported platform:
+
+| Directory in the jar | Platform |
+|----------------------|----------|
+| `natives/linux-x86_64/libterrain_generator_ffi.so` | Linux x86-64, glibc 2.35 or newer |
+| `natives/macos-aarch64/libterrain_generator_ffi.dylib` | macOS on Apple Silicon |
+| `natives/macos-x86_64/libterrain_generator_ffi.dylib` | macOS on Intel |
+| `natives/windows-x86_64/terrain_generator_ffi.dll` | Windows x86-64 |
+
+Put it on the classpath and it works — no `cargo`, no `LD_LIBRARY_PATH`,
+nothing to install:
 
 ```sh
-./java/build.sh
+java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.2.1.jar:. YourApp
 ```
 
-That builds `terrain_generator_ffi`, compiles the bindings into
-`java/out/`, and runs the binding tests. Manually, it is:
-
-```sh
-cargo build --release -p terrain_generator_ffi
-javac -d java/out $(find java -name '*.java')
-java --enable-native-access=ALL-UNNAMED \
-     -Dtergen.library=target/release/libterrain_generator_ffi.so \
-     -cp java/out TerrainGeneratorTest
-```
-
-The sources are plain Java with no dependencies, so they drop into Maven,
-Gradle or a plain classpath unchanged — copy
-`java/com/github/fabioticconi/tergen/` into your source tree, or compile it
-into a jar.
+This is the same trick sqlite-jdbc, LWJGL and netty-tcnative use, and it
+has the same two caveats. The Linux library is linked against glibc, not
+musl: an Alpine JVM needs a library built for it (build from source, or
+point `tergen.library` at your own). And the extracted copy cannot be
+deleted on Windows while the process holds it open, so a few hundred
+kilobytes may linger in the system temporary directory until the OS
+reclaims them.
 
 ### Locating the native library
 
@@ -46,11 +54,46 @@ into a jar.
 
 1. the path given by the `tergen.library` system property;
 2. `libterrain_generator_ffi.so` (`.dylib` on macOS, `.dll` on Windows) on
-   the default library search path.
+   the default library search path;
+3. `/natives/<os>-<arch>/<library>` on the classpath, copied out to a
+   private temporary directory and loaded from there.
+
+The bundled copy is deliberately last, so a library you built yourself
+still wins while you are working on the Rust side. `<os>` is `linux`,
+`macos` or `windows`; `<arch>` is `x86_64` or `aarch64`, normalised from
+`os.arch` (so `amd64` and `arm64` map onto the same directories).
+
+If none of the three work, the failure names the platform it looked for
+and carries both underlying errors as suppressed exceptions.
 
 Because FFM downcalls are a restricted operation, pass
 `--enable-native-access=ALL-UNNAMED` (or the equivalent for your module) to
 avoid a runtime warning.
+
+## Building from source
+
+```sh
+./java/build.sh
+```
+
+That builds `terrain_generator_ffi` for the host, packs
+`java/out/terrain-generator-<version>.jar` with that one native inside it,
+and runs the binding tests twice: once against the freshly built library,
+and once against the jar with nothing on the library search path — which
+is the only way to exercise the extraction path every jar consumer takes.
+
+To pack a jar for several platforms at once, collect the libraries into
+one directory named the way the loader expects and call the packaging
+script directly:
+
+```sh
+bash java/package-jar.sh 0.2.1 path/to/natives
+```
+
+The sources are plain Java with no dependencies, so they also drop into
+Maven, Gradle or a plain classpath unchanged — copy
+`java/com/github/fabioticconi/tergen/` into your source tree if you would
+rather vendor them than depend on the jar.
 
 ## Quick start
 

@@ -1,5 +1,8 @@
 package com.github.fabioticconi.tergen;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -9,7 +12,9 @@ import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 /**
  * Entry point for generating terrain from Java.
@@ -26,8 +31,16 @@ import java.nio.file.Path;
  * <ol>
  *   <li>the path in the {@code tergen.library} system property, if set;</li>
  *   <li>{@code libterrain_generator_ffi.so} (or the platform equivalent)
- *       on the default library search path.</li>
+ *       on the default library search path;</li>
+ *   <li>a copy bundled in the jar under
+ *       {@code /natives/<os>-<arch>/}, extracted to a temporary file and
+ *       loaded from there.</li>
  * </ol>
+ *
+ * The third step is why the released jar runs with no Rust toolchain and
+ * nothing to install: it carries a library for every supported platform.
+ * The first two steps come first so that a locally built library still
+ * wins, which is what you want while developing the Rust side.
  *
  * Because the FFM API is a restricted operation, run with
  * {@code --enable-native-access=ALL-UNNAMED} (or the equivalent for your
@@ -151,12 +164,87 @@ public final class TerrainGenerator {
     private TerrainGenerator() {}
 
     private static SymbolLookup loadLibrary() {
-        String explicit = System.getProperty("tergen.library");
         Arena arena = Arena.global();
+
+        String explicit = System.getProperty("tergen.library");
         if (explicit != null && !explicit.isBlank()) {
             return SymbolLookup.libraryLookup(Path.of(explicit), arena);
         }
-        return SymbolLookup.libraryLookup(System.mapLibraryName("terrain_generator_ffi"), arena);
+
+        String libName = System.mapLibraryName("terrain_generator_ffi");
+        try {
+            return SymbolLookup.libraryLookup(libName, arena);
+        } catch (IllegalArgumentException | UnsatisfiedLinkError notOnSearchPath) {
+            try {
+                return SymbolLookup.libraryLookup(extractBundledLibrary(libName), arena);
+            } catch (RuntimeException | IOException notBundled) {
+                IllegalStateException failure = new IllegalStateException(
+                        "could not load the terrain-generator native library: it is neither on the "
+                                + "library search path nor bundled in the jar for " + platform()
+                                + ". Build it with 'cargo build --release -p terrain_generator_ffi' "
+                                + "and point -Dtergen.library at the result.");
+                failure.addSuppressed(notOnSearchPath);
+                failure.addSuppressed(notBundled);
+                throw failure;
+            }
+        }
+    }
+
+    /**
+     * Copies the native library bundled for this platform out of the jar
+     * and into a temporary file, which is what the released jar relies on.
+     *
+     * <p>The file lands in a private temporary directory — created with
+     * owner-only permissions where the filesystem supports them — so no
+     * other user can swap the library out between writing and loading it.
+     */
+    private static Path extractBundledLibrary(String libName) throws IOException {
+        String resource = "/natives/" + platform() + "/" + libName;
+        try (InputStream in = TerrainGenerator.class.getResourceAsStream(resource)) {
+            if (in == null) {
+                throw new FileNotFoundException("no native library bundled at " + resource);
+            }
+            Path dir = Files.createTempDirectory("terrain-generator-native");
+            Path file = dir.resolve(libName);
+            Files.copy(in, file);
+            // Best-effort cleanup: a loaded library cannot be deleted on
+            // Windows while the process holds it, so the copy may outlive
+            // the JVM there. It is a few hundred kilobytes in the system
+            // temporary directory, which the OS reclaims.
+            file.toFile().deleteOnExit();
+            dir.toFile().deleteOnExit();
+            return file;
+        }
+    }
+
+    /**
+     * The {@code <os>-<arch>} directory naming the bundled libraries, e.g.
+     * {@code linux-x86_64} or {@code macos-aarch64}. Unrecognised values
+     * pass through so the failure names the platform actually seen rather
+     * than a wrong guess.
+     */
+    private static String platform() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+
+        String osDir;
+        if (os.startsWith("mac") || os.startsWith("darwin")) {
+            osDir = "macos";
+        } else if (os.startsWith("windows")) {
+            osDir = "windows";
+        } else if (os.startsWith("linux")) {
+            osDir = "linux";
+        } else {
+            osDir = os.replaceAll("[^a-z0-9]+", "-");
+        }
+
+        String archDir = switch (arch) {
+            case "x86_64", "amd64" -> "x86_64";
+            case "aarch64", "arm64" -> "aarch64";
+            default -> arch.replaceAll("[^a-z0-9]+", "-");
+        };
+
+        return osDir + "-" + archDir;
     }
 
     private static MethodHandle downcall(String symbol, FunctionDescriptor descriptor) {

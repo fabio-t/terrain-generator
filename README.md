@@ -302,9 +302,44 @@ through the [Foreign Function & Memory API][ffm] — no JNI shim, and no
 Java-specific code inside the Rust library. The Java sources have no
 dependencies, so they drop into Maven, Gradle or a plain classpath.
 
+### Using the released jar
+
+Every release attaches `terrain-generator-<version>.jar`, which carries a
+native library for each supported platform inside it:
+
+| | |
+|---|---|
+| Linux | x86-64 (glibc 2.35+) |
+| macOS | Apple Silicon and Intel |
+| Windows | x86-64 |
+
+Put it on the classpath and you are done — **no Rust toolchain, nothing to
+install, nothing to build**:
+
 ```sh
-./java/build.sh   # builds the native library, compiles the bindings, runs their tests
+java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.2.1.jar:. YourApp
 ```
+
+The binding loads its native library from the first of these that works:
+
+1. the path in the `tergen.library` system property, if set;
+2. the default library search path;
+3. the copy bundled in the jar for this platform, extracted to a
+   temporary file.
+
+So a locally built library still wins while you are working on the Rust
+side, and everyone else gets step 3 without knowing it exists. The jar is
+compiled for Java 22, and mismatched jar/native combinations are caught at
+class-init by an ABI-version check rather than by misreading memory.
+
+### Building from source
+
+```sh
+./java/build.sh   # builds the native library, packs the jar, runs the binding tests
+```
+
+That runs the tests twice: once against the freshly built library and once
+against the jar alone, so the extraction path is covered too.
 
 ```java
 import com.github.fabioticconi.tergen.*;
@@ -335,7 +370,7 @@ you would rather use `jextract` or call it from C/C++.
 cargo test --workspace     # Rust unit, integration and doc tests
 cargo clippy --workspace   # lints
 mix test                   # Elixir tests (needs Elixir + Rust)
-./java/build.sh            # Java binding tests (needs JDK 22+ and Rust)
+./java/build.sh            # Java jar + binding tests (needs JDK 22+ and Rust)
 ```
 
 CI (formatting, clippy, both test suites) runs automatically on pushes
@@ -343,9 +378,10 @@ to `main`, and on demand for any other branch via **Run workflow** on
 the [Actions tab](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml)
 — pull requests are not built automatically. Releases
 are cut by pushing a tag: `v1.2.3` (or `1.2.3`) publishes a release with
-binaries for Linux, macOS and Windows attached, and release notes taken
-from that version's CHANGELOG section; a pre-release tag like
-`v1.2.3-rc1` publishes a GitHub pre-release.
+CLI binaries for Linux, macOS and Windows attached, plus the Java jar with
+every platform's native library inside it, and release notes taken from
+that version's CHANGELOG section; a pre-release tag like `v1.2.3-rc1`
+publishes a GitHub pre-release.
 
 ## License
 
