@@ -15,7 +15,8 @@
 ## Checks
 
 What CI runs. It is not triggered by pull requests, so a maintainer
-dispatches it; run these locally first.
+dispatches it; run these locally first. `mise run ci` runs the Rust ones on
+CI's pinned toolchain (see `AGENTS.md`).
 
 - [ ] `cargo fmt --all --check`
 - [ ] `cargo clippy --workspace --all-features -- -D warnings`
