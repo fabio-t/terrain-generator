@@ -10,9 +10,10 @@ that **rivers follow the eroded valleys** and depressions become lakes.
 
 ![example map](docs/example.png)
 
-It is usable four ways:
+It is usable five ways:
 
 - as a **CLI** that renders maps to PNG,
+- as a **desktop GUI** for trying settings with a live preview,
 - as a **Rust library** (`cargo` dependency),
 - as an **Elixir library** via a Rustler NIF (`mix` dependency),
 - as a **Java library** via the Foreign Function & Memory API — and, through
@@ -228,6 +229,8 @@ default when `--layers` is not given.
 
 ## Desktop GUI
 
+![the desktop GUI](docs/gui.png)
+
 ```sh
 cargo run -p terrain-gui --release
 ```
@@ -236,8 +239,15 @@ Every CLI generation option as a control, a preview that shows the height
 and water type of the cell under the pointer, and export of the picture,
 the 16-bit heightmap or all layers. **Generate** builds the map on a
 background thread; the *CLI command* panel gives the `terrain-generator`
-invocation for the current settings. Use `--release`: erosion is many
-times slower in a debug build.
+invocation for the current settings, and its exports match the CLI's
+byte for byte. Use `--release`: erosion is many times slower in a debug
+build.
+
+On Linux the file dialogs go through the desktop portal
+(`xdg-desktop-portal`), which every desktop session runs.
+
+Contributed by [@romangrigorii](https://github.com/romangrigorii) in
+[#8](https://github.com/fabio-t/terrain-generator/pull/8).
 
 ## Rust library
 

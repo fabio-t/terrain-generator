@@ -16,6 +16,7 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
   with a per-cell readout, progress while it generates, and export of the
   picture, the 16-bit heightmap, or every layer. It also shows the CLI
   command that reproduces the current map. Not published to crates.io.
+  Contributed by @romangrigorii (#8).
 
 ### Rust library
 
