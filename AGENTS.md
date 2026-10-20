@@ -61,10 +61,10 @@ The toolchain is pinned in [`mise.toml`](mise.toml), and CI reads the same
 line. With [mise](https://mise.jdx.dev):
 
 ```sh
-mise install       # the pinned Rust
+mise install       # the pinned Rust, Erlang/OTP, Elixir and JDK
 mise run ci        # fmt, clippy -D warnings, tests, the feature builds
-mise run elixir    # if you touched lib/, test/ or the NIF (needs Elixir/OTP)
-mise run java      # if you touched java/ or the FFI (needs JDK 22+)
+mise run elixir    # if you touched lib/, test/ or the NIF
+mise run java      # if you touched java/ or the FFI
 ```
 
 Without mise, the commands are in `mise.toml`'s tasks. Run them with the

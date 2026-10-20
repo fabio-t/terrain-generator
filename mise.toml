@@ -1,7 +1,8 @@
-# Toolchain and dev tasks. `mise install` gives you the Rust CI builds with,
-# and `mise run ci` runs the Rust checks CI runs, in the same order.
+# Toolchains and dev tasks. `mise install` gives you the Rust, Erlang/OTP,
+# Elixir and JDK that CI builds with, and `mise run ci` runs the Rust checks
+# CI runs, in the same order.
 #
-# Without mise: install the version below with
+# Without mise: install the Rust version below with
 # `rustup toolchain install <version> -c clippy -c rustfmt` and run the
 # commands from the tasks. Any recent stable works for development; the pin
 # is what CI uses.
@@ -22,6 +23,15 @@
 # Not the MSRV. That is `rust-version` in Cargo.toml, a promise to the
 # libraries' users that CI checks with its own toolchain.
 rust = "1.99.1"
+
+# **The bindings' runtimes**, the versions CI's Elixir and Java jobs set up
+# (`setup-beam` and `setup-java` in the workflows; keep them matching).
+# Each is a prebuilt download, a few seconds apiece. They sit here rather
+# than as task-scoped `tools` because mise installs Elixir by running it,
+# which needs `erl` on the PATH, and only `[tools]` provides that.
+erlang = "29"
+elixir = "1.20-otp-29"
+java = "temurin-25"
 
 [tasks.lint]
 description = "Formatting and lints, exactly as CI checks them"
@@ -50,7 +60,7 @@ description = "The Rust checks CI runs, before you push"
 depends = ["lint", "test"]
 
 [tasks.elixir]
-description = "Elixir checks as CI runs them (needs Elixir and Erlang/OTP)"
+description = "Elixir checks as CI runs them"
 run = [
   "mix deps.get",
   "mix format --check-formatted",
@@ -59,7 +69,7 @@ run = [
 ]
 
 [tasks.java]
-description = "Java jar and binding tests as CI runs them (needs JDK 22+)"
+description = "Java jar and binding tests as CI runs them"
 run = "./java/build.sh"
 
 [tasks.gui]
