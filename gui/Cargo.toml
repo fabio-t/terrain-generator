@@ -1,0 +1,11 @@
+[package]
+name = "terrain-gui"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Interactive preview and export for the terrain generator"
+
+[dependencies]
+eframe = "0.32"
+rfd = "0.15"
+terrain-generator = { path = "..", default-features = false, features = ["png"] }
