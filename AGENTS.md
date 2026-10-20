@@ -31,8 +31,9 @@ per language are in `docs/`.
    If a change moves them, it is a breaking change. Make it on purpose:
    update the checksums, and call it out in the CHANGELOG with which layers
    move and for which options. Never update a checksum just to get green.
-   `noise` generates part of the output, so a `noise` upgrade is held to
-   the same bar.
+   `noise` generates part of the output, so it is pinned exactly
+   (`=0.9.0`) and an upgrade is held to the same bar: move the pin by hand,
+   run the goldens, and say so in the CHANGELOG.
 2. **The libraries keep an MSRV.** `rust-version` in `Cargo.toml` is
    currently set by rustler. CI checks every crate except the GUI against
    it. Code in `src/` and `native/` must build on that version. The GUI is

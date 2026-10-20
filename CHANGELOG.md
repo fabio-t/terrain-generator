@@ -20,6 +20,11 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
 
 ### Rust library
 
+- `noise` is pinned to exactly 0.9.0. Before, it was `0.9`, so a
+  `cargo update` could pull in a new 0.9 patch release, and with it
+  different terrain, without this crate changing. If your own code
+  depends on a different 0.9 patch of `noise`, it can no longer build
+  alongside this crate.
 - `TerrainBuilder::try_generate_with_progress` reports how far generation
   has got, as a fraction from 0 to 1 that never goes backwards plus a
   short stage name. `try_generate` is unchanged and now calls it with a

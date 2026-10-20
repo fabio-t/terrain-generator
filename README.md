@@ -282,10 +282,11 @@ Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
 ### Determinism and stored worlds
 
 The same seed and parameters always produce the same terrain. If you
-persist worlds **as seeds** and regenerate them on load, pin an exact tag
-or revision of this crate and commit your `Cargo.lock` — output depends on
-the `noise` crate and on tuning here, so any change to it is a breaking
-change for your saves.
+persist worlds **as seeds** and regenerate them on load, pin an exact version
+of this crate and commit your `Cargo.lock`. Any change to the output is a
+breaking change for your saves. The output also depends on the `noise`
+crate, which this crate pins to an exact version, so `noise` changes
+only when this crate does.
 
 One exception to cross-platform bit-exactness: the normalised `flow` layer
 is computed with `f32::ln`, whose last-bit rounding can differ between

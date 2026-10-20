@@ -35,8 +35,8 @@ CI's pinned toolchain (see `AGENTS.md`).
 - [ ] The libraries still build on the MSRV in `Cargo.toml`
       (`rust-version`). If you need a newer Rust, bump it and say why; the
       GUI is exempt
-- [ ] `noise` is untouched, or the golden checksums above still pass:
-      its output is part of ours
+- [ ] The `noise` pin (`=0.9.0`) is untouched, or the golden checksums
+      above still pass: its output is part of ours
 - [ ] Not bumping versions here: releases do that, in `Cargo.toml`, both
       `native/*/Cargo.toml`, `mix.exs`, and the jar name in the docs
 
