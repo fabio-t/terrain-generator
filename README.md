@@ -226,6 +226,19 @@ quantisation (8 bits would terrace the elevation); the masks are 8-bit
 black/white. `shaded` is also available as a layer name, and remains the
 default when `--layers` is not given.
 
+## Desktop GUI
+
+```sh
+cargo run -p terrain-gui --release
+```
+
+Every CLI generation option as a control, a preview that shows the height
+and water type of the cell under the pointer, and export of the picture,
+the 16-bit heightmap or all layers. **Generate** builds the map on a
+background thread; the *CLI command* panel gives the `terrain-generator`
+invocation for the current settings. Use `--release`: erosion is many
+times slower in a debug build.
+
 ## Rust library
 
 ```toml
