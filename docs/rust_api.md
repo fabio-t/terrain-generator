@@ -91,7 +91,7 @@ different seeds via `.seed(n)`).
 
 | Method | Default | Description |
 |--------|---------|-------------|
-| `.size(width, height)` | `512 × 512` | Map dimensions in cells. |
+| `.size(width, height)` | `512 × 512` | Map dimensions in cells. `width * height` must be at most `MAX_CELLS` (2³² − 1, so 65535 × 65535). |
 | `.seed(u32)` | `0` | Generation seed. |
 | `.sea_level(f32)` | `0.08` | Sea level in `[0, 1)`. |
 | `.noise(NoiseParams)` | see below | Fractal noise parameters. |

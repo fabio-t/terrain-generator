@@ -28,7 +28,8 @@ defmodule TerrainGenerator do
 
   All functions take the same option list; omitted keys use the defaults.
 
-    * `:width`, `:height` — map size in cells (default `512 × 512`)
+    * `:width`, `:height` — map size in cells (default `512 × 512`), at most
+      4,294,967,295 cells in all
     * `:seed` — generation seed (default `0`)
     * `:sea_level` — sea level in `[0, 1)` (default `0.08`)
     * `:octaves` — noise octaves (default `8`)
@@ -164,10 +165,13 @@ defmodule TerrainGenerator do
     end
 
     merged = Map.merge(@defaults, opts)
+    width = validate_pos_int(:width, merged.width)
+    height = validate_pos_int(:height, merged.height)
+    validate_cells(width, height)
 
     %{
-      width: validate_pos_int(:width, merged.width),
-      height: validate_pos_int(:height, merged.height),
+      width: width,
+      height: height,
       seed: validate_non_neg_int(:seed, merged.seed),
       sea_level: validate_number(:sea_level, merged.sea_level, 0.0, 1.0),
       octaves: validate_pos_int(:octaves, merged.octaves),
@@ -187,6 +191,18 @@ defmodule TerrainGenerator do
       river_min_upstream: validate_optional_cells(merged.river_min_upstream)
     }
   end
+
+  # The Rust core's MAX_CELLS: hydrology indexes cells with 32-bit integers.
+  @max_cells 4_294_967_295
+
+  defp validate_cells(width, height) when width * height <= @max_cells, do: :ok
+
+  defp validate_cells(width, height),
+    do:
+      raise(
+        ArgumentError,
+        "width * height must be at most #{@max_cells} cells, got: #{width * height}"
+      )
 
   defp validate_archipelago(false), do: 0
   defp validate_archipelago(n) when is_integer(n) and n > 0, do: n

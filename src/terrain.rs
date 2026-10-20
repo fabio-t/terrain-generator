@@ -4,6 +4,12 @@ use crate::grid::Grid;
 use crate::render::{self, RenderStyle};
 use crate::{base, breach, erosion, hydrology};
 
+/// The most cells a map can have: `width * height` must not exceed it.
+///
+/// That is `65535 x 65535`, or 16 GiB for each float layer. Hydrology and
+/// basin breaching index cells with `u32`, which sets the limit.
+pub const MAX_CELLS: usize = u32::MAX as usize;
+
 /// An invalid generation parameter.
 ///
 /// Returned by [`TerrainBuilder::try_generate`]; [`TerrainBuilder::generate`]
@@ -613,6 +619,9 @@ impl Default for TerrainBuilder {
 
 impl TerrainBuilder {
     /// Sets the map dimensions in cells. Default: `512 x 512`.
+    ///
+    /// Both must be positive, and `width * height` at most
+    /// [`MAX_CELLS`].
     pub fn size(mut self, width: usize, height: usize) -> Self {
         self.width = width;
         self.height = height;
@@ -857,6 +866,18 @@ impl TerrainBuilder {
             "width and height",
             "must be positive",
         )?;
+        // Hydrology and basin breaching index cells with u32, and breaching
+        // keeps u32::MAX free to mean "no cell". A bigger map would wrap
+        // those indices, and in a release build `width * height` itself can
+        // wrap, so either would panic mid-generation instead of failing
+        // here. The limit allows 65535 x 65535, 16 GiB per float layer.
+        check(
+            self.width
+                .checked_mul(self.height)
+                .is_some_and(|cells| cells <= MAX_CELLS),
+            "width and height",
+            "must give at most 4294967295 cells (2^32 - 1)",
+        )?;
         check(
             (0.0..1.0).contains(&self.sea_level),
             "sea level",
@@ -1021,6 +1042,18 @@ mod tests {
         assert_eq!(err.param, "river density");
 
         assert!(Terrain::builder().size(16, 16).try_generate().is_ok());
+
+        // rejected before anything is allocated, so these cost nothing
+        let err = Terrain::builder()
+            .size(65536, 65536)
+            .try_generate()
+            .unwrap_err();
+        assert_eq!(err.param, "width and height");
+        let err = Terrain::builder()
+            .size(usize::MAX, 2)
+            .try_generate()
+            .unwrap_err();
+        assert_eq!(err.param, "width and height");
     }
 
     #[test]

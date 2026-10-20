@@ -61,7 +61,7 @@ public final class TerrainConfig {
         return config;
     }
 
-    /** Map dimensions in cells. */
+    /** Map dimensions in cells; {@code width * height} must be at most 2<sup>32</sup> - 1. */
     public TerrainConfig size(long width, long height) {
         this.width = width;
         this.height = height;

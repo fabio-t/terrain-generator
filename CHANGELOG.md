@@ -48,14 +48,22 @@ needs a git dependency any more.
   has got, as a fraction from 0 to 1 that never goes backwards plus a
   short stage name. `try_generate` is unchanged and now calls it with a
   no-op callback.
+- A map may have at most `MAX_CELLS` cells (2³² − 1, so 65535 × 65535),
+  and `try_generate` returns a `ParamError` for anything bigger. Before,
+  such a map got past validation: hydrology's 32-bit cell indices
+  wrapped, and in a release build `width * height` could too, giving a
+  panic or wrong layers instead of an error.
 
 ### Elixir and Java
 
 - The Elixir library is on Hex: `{:terrain_generator, "~> 0.3"}`. The
   NIF still compiles from source, so Rust 1.91+ is needed at compile
   time. Documentation is on HexDocs.
-- No API changes in either. The NIF, the C ABI and the jar are rebuilt
-  on the updated dependencies.
+- The same cell limit applies. For a bigger map, the Elixir wrapper
+  raises `ArgumentError`, the C ABI returns `TG_INVALID_PARAMS`, and Java
+  throws `TerrainException`.
+- No other API changes in either. The NIF, the C ABI and the jar are
+  rebuilt on the updated dependencies.
 
 No change to generated terrain: the same seed and parameters give the
 same map as 0.2.x, progress callback or not.

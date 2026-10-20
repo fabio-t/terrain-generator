@@ -61,6 +61,7 @@ typedef struct TgTerrain TgTerrain;
  *   river_density <= 0            : no rivers (unless the above is set)
  */
 typedef struct TgConfig {
+    /* width * height must be at most 4294967295 (2^32 - 1) cells */
     uint64_t width;
     uint64_t height;
     uint32_t seed;

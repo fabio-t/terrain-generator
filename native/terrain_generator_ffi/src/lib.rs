@@ -586,6 +586,20 @@ mod tests {
     }
 
     #[test]
+    fn oversized_maps_are_rejected_not_crashed() {
+        // one past the cell limit, and a product that overflows usize
+        for (width, height) in [(65536, 65536), (u64::MAX, 2)] {
+            let mut cfg = small_config();
+            cfg.width = width;
+            cfg.height = height;
+            let mut handle = std::ptr::null_mut();
+            // SAFETY: cfg and handle are live local storage
+            assert_eq!(unsafe { tg_generate(&cfg, &mut handle) }, TG_INVALID_PARAMS);
+            assert!(handle.is_null());
+        }
+    }
+
+    #[test]
     fn null_arguments_are_rejected_not_crashed() {
         // SAFETY: null is explicitly handled by both functions
         assert_eq!(

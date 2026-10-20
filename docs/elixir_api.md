@@ -50,7 +50,7 @@ Raises `ArgumentError` on unknown option keys.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `:width`, `:height` | `512`, `512` | Map size in cells. |
+| `:width`, `:height` | `512`, `512` | Map size in cells. `width * height` must be at most 2³² − 1 (65535 × 65535). |
 | `:seed` | `0` | Generation seed. |
 | `:sea_level` | `0.08` | Sea level in `[0, 1)`. |
 | `:octaves` | `8` | Noise octaves. |

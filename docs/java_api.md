@@ -126,7 +126,7 @@ native library*, so they cannot drift — and chain setters:
 
 | Method | Meaning |
 |--------|---------|
-| `size(width, height)` | Map dimensions in cells. Default `512 × 512`. |
+| `size(width, height)` | Map dimensions in cells. Default `512 × 512`. `width * height` must be at most 2³² − 1 (65535 × 65535). |
 | `seed(int)` | Generation seed. |
 | `seaLevel(float)` | Sea level in `[0, 1)`. Default `0.08`. |
 | `noise(octaves, frequency, lacunarity, persistence)` | Fractal noise settings. |
