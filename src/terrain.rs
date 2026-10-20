@@ -799,7 +799,7 @@ impl TerrainBuilder {
                 &mut heightmap,
                 erosion_params,
                 self.seed,
-                |done, droplets| {
+                &mut |done, droplets| {
                     let t = if droplets == 0 {
                         1.0
                     } else {
