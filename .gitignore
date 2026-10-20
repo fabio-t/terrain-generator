@@ -1,5 +1,11 @@
+# Rust / Cargo
 target/
-.idea/
+**/*.rs.bk
+*.pdb
+
+# Cargo.lock IS committed: CI builds with --locked, and the CLI, the GUI and
+# the bindings all want a reproducible dependency graph. The determinism
+# contract depends on it too, because `noise` produces part of our output.
 
 # Elixir
 _build/
@@ -9,10 +15,41 @@ erl_crash.dump
 *.ez
 terrain_generator-*.tar
 
-# generated maps
+# Java bindings build output
+java/out/
+
+# Generated maps: the CLI and the GUI write them to the working directory.
+# The pictures in docs/ are content and stay tracked.
 *.png
 !docs/*.png
 !docs/options/*.png
 
-# Java bindings build output
-java/out/
+# Profiling / tracing output
+*.folded
+perf.data*
+flamegraph.svg
+callgrind.out.*
+
+# Editors / IDEs
+.idea/
+/.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.helix/
+rust-project.json
+.elixir_ls/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local environment overrides
+/.env
+/.env.local
+.direnv/
+
+# Worktrees an agent makes for itself
+.claude/worktrees/
