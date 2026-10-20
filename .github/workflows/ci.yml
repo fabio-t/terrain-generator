@@ -147,8 +147,10 @@ jobs:
         with:
           otp-version: "29"
           elixir-version: "1.20"
+      # --check-locked is Cargo's --locked: a mix.exs change without its
+      # mix.lock fails here instead of resolving afresh on the runner.
       - name: Fetch dependencies
-        run: mix deps.get
+        run: mix deps.get --check-locked
       - name: Check formatting
         run: mix format --check-formatted
       - name: Compile (warnings as errors)

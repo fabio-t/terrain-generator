@@ -456,7 +456,7 @@ jobs:
             echo "::error::the HEX_API_KEY repository secret is not set"
             exit 1
           fi
-          mix deps.get
+          mix deps.get --check-locked
           mix hex.publish --yes
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

@@ -52,8 +52,9 @@ Cargo commands run from the root do not reach it: use
 5. **Versions move together, at release time.** The version is in
    `Cargo.toml`, both `native/*/Cargo.toml`, `mix.exs`, and the jar name in
    `README.md` and `docs/java_api.md`. A feature PR bumps none of them.
-6. **Both lockfiles are committed** (`Cargo.lock`, `gui/Cargo.lock`), and
-   CI builds with `--locked`.
+6. **The lockfiles are committed** (`Cargo.lock`, `gui/Cargo.lock`,
+   `mix.lock`), and CI builds with `--locked` (`mix deps.get
+   --check-locked`).
 
 ## Checks
 
@@ -110,14 +111,16 @@ tagged until the release PR, the one that moves the version (rule 5), has
 had four passes, and its description records what each found:
 
 1. **Dependencies.** Everything is on its latest release, or the PR says
-   why not: both lockfiles (`cargo update --dry-run --verbose` lists what
-   is held back), the Hex dependencies in `mix.exs`, the GitHub Actions,
-   the pinned toolchain. The libraries still build on the MSRV.
-2. **Security.** No known advisory in either lockfile (`cargo audit`), and
-   no retired Hex package (`mix hex.audit`). The `unsafe` code in `native/` is
-   re-read: every pointer, length and size crossing the C ABI and the NIF
-   is checked before use. Workflow permissions are the least each job
-   needs, and no secret reaches a job that does not publish.
+   why not: the Cargo lockfiles (`cargo update --dry-run --verbose` lists
+   what is held back), `mix.lock` (`mix hex.outdated`), the GitHub
+   Actions, the pinned runtimes in `mise.toml`. The libraries still build
+   on the MSRV.
+2. **Security.** No known advisory in the Cargo lockfiles (`cargo
+   audit`), and no retired Hex package (`mix hex.audit`). The `unsafe`
+   code in `native/` is re-read: every pointer, length and size crossing
+   the C ABI and the NIF is checked before use. Workflow permissions are
+   the least each job needs, and no secret reaches a job that does not
+   publish.
 3. **Performance.** Generation is timed against the previous release, on
    the same machine, for the README's example maps (`cargo run --release`
    on both tags). A slowdown is explained in the PR, or fixed.
