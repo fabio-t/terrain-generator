@@ -7,16 +7,20 @@ target/
 # the bindings all want a reproducible dependency graph. The determinism
 # contract depends on it too, because `noise` produces part of our output.
 
-# Elixir
+# Elixir / Erlang
 _build/
 deps/
 doc/
 erl_crash.dump
 *.ez
+*.beam
 terrain_generator-*.tar
 
-# Java bindings build output
+# Java
 java/out/
+*.class
+hs_err_pid*.log
+replay_pid*.log
 
 # Generated maps: the CLI and the GUI write them to the working directory.
 # The pictures in docs/ are content and stay tracked.
@@ -29,27 +33,139 @@ java/out/
 perf.data*
 flamegraph.svg
 callgrind.out.*
+*.profraw
+*.profdata
 
-# Editors / IDEs
+# ---------------------------------------------------------------------------
+# Personal tooling. Everything below is something a contributor's editor, OS
+# or assistant writes into the tree, which ends up in a commit when someone
+# runs `git add .` without looking. None of it is project content.
+# ---------------------------------------------------------------------------
+
+# JetBrains (RustRover, IntelliJ, CLion)
 .idea/
-/.vscode/
 *.iml
+*.ipr
+*.iws
+.fleet/
+
+# VS Code and its forks (Cursor, Windsurf, VSCodium)
+.vscode/
+*.code-workspace
+.history/
+.lh/
+
+# Visual Studio
+.vs/
+
+# Eclipse and NetBeans, for the Java side
+.project
+.classpath
+.settings/
+.metadata/
+.factorypath
+nbproject/
+
+# Vim, Emacs, Kate, Sublime, Zed, Helix, Nova
 *.swp
 *.swo
 *~
+\#*\#
+.\#*
+.*.kate-swp
+*.sublime-project
+*.sublime-workspace
+.zed/
 .helix/
+.nova/
+
+# Language servers
 rust-project.json
 .elixir_ls/
+.lexical/
+.expert/
+.elixir-tools/
+
+# AI assistants and agent harnesses.
+#
+# **AGENTS.md is the brief, for every tool**, and CLAUDE.md only imports it.
+# Per-tool instruction files and config directories would hold a second
+# copy of the rules that drifts away from the first, so they stay out. Point
+# your tool at AGENTS.md instead. A tool's own caches, histories, worktrees
+# and local settings are personal and stay out too.
+.claude/
+CLAUDE.local.md
+.cursor/
+.cursorrules
+.cursorignore
+.cursorindexingignore
+.windsurf/
+.windsurfrules
+.codeium/
+.continue/
+.aider*
+CONVENTIONS.md
+.gemini/
+GEMINI.md
+.codex/
+.cline/
+.clinerules
+.roo/
+.roomodes
+.kiro/
+.junie/
+.amazonq/
+.opencode/
+.goose/
+.goosehints
+.zencoder/
+.tabnine/
+.copilot/
+.augment/
+.trae/
+.qodo/
+.specstory/
+.crush/
+.serena/
+.mcp.json
+
+# Version managers. mise.toml is the pin; a personal override or a second
+# pin file in another format would quietly disagree with it.
+mise.local.toml
+.mise.local.toml
+.tool-versions
+.rust-toolchain.toml
+rust-toolchain.toml
+rust-toolchain
 
 # OS cruft
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 desktop.ini
+$RECYCLE.BIN/
+.directory
+.fuse_hidden*
+.nfs*
 
-# Local environment overrides
-/.env
-/.env.local
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+.envrc
 .direnv/
+*.pem
+*.key
 
-# Worktrees an agent makes for itself
-.claude/worktrees/
+# Nix build links
+/result
+/result-*
+
+# Leftovers from patches, merges and editors
+*.orig
+*.rej
+*.bak
+*.tmp
