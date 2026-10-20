@@ -135,7 +135,7 @@ jobs:
       # stored ~95 MB (mostly the crates.io registry) against the repo's
       # cache budget, where it competes with the Rust job's cache, which
       # does save minutes.
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           # the bindings use the Foreign Function & Memory API, final in 22
