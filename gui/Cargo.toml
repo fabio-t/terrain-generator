@@ -9,6 +9,6 @@ publish = false
 description = "Interactive preview and export for the terrain generator"
 
 [dependencies]
-eframe = "0.32"
-rfd = "0.15"
+eframe = "0.37"
+rfd = "0.17"
 terrain-generator = { path = "..", default-features = false, features = ["png"] }

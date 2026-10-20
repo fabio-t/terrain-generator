@@ -895,16 +895,17 @@ impl TerrainApp {
 }
 
 impl eframe::App for TerrainApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
         self.readout = None;
-        self.poll(ctx);
-        self.sync_view(ctx);
+        self.poll(&ctx);
+        self.sync_view(&ctx);
 
-        egui::SidePanel::left("controls")
+        egui::Panel::left("controls")
             .resizable(true)
-            .default_width(340.0)
-            .width_range(300.0..=460.0)
-            .show(ctx, |ui| {
+            .default_size(340.0)
+            .size_range(300.0..=460.0)
+            .show(ui, |ui| {
                 ui.heading("Terrain");
                 ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -912,7 +913,7 @@ impl eframe::App for TerrainApp {
                 });
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             self.preview(ui);
         });
 
