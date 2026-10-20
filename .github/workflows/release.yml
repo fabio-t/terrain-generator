@@ -16,8 +16,13 @@ on:
   # a branch without burning a tag.
   workflow_dispatch:
 
+# **Read-only by default; only the job that creates the release may
+# write.** The build jobs compile and run code from every dependency, on
+# runners for three operating systems, and none of them needs to change
+# the repository. A token that can push or rewrite a release is handed
+# only to the one job that does.
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -291,6 +296,9 @@ jobs:
     # tested every artefact the release would have carried.
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    permissions:
+      # creates the release and uploads its assets
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
