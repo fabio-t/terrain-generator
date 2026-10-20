@@ -27,10 +27,10 @@ rust = "1.99.1"
 description = "Formatting and lints, exactly as CI checks them"
 run = [
   "cargo fmt --all --check",
-  "cargo clippy --workspace --all-features -- -D warnings",
+  "cargo clippy --workspace --all-features --all-targets -- -D warnings",
   # the GUI is its own workspace, which --all and --workspace do not reach
   "cargo fmt --manifest-path gui/Cargo.toml --check",
-  "cargo clippy --manifest-path gui/Cargo.toml -- -D warnings",
+  "cargo clippy --manifest-path gui/Cargo.toml --all-targets -- -D warnings",
 ]
 
 [tasks.test]

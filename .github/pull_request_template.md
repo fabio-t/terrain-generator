@@ -19,7 +19,7 @@ dispatches it; run these locally first. `mise run ci` runs the Rust ones on
 CI's pinned toolchain (see `AGENTS.md`).
 
 - [ ] `cargo fmt --all --check`
-- [ ] `cargo clippy --workspace --all-features -- -D warnings`
+- [ ] `cargo clippy --workspace --all-features --all-targets -- -D warnings`
 - [ ] `cargo test --workspace`
 - [ ] The same three for the GUI with `--manifest-path gui/Cargo.toml`, if
       you touched `gui/` or the library's API (the GUI is its own workspace)

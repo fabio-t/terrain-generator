@@ -1119,11 +1119,13 @@ mod tests {
 
     #[test]
     fn params_drive_the_generator() {
-        let mut params = GenParams::default();
-        params.width = 32;
-        params.height = 24;
-        params.erosion = false;
-        params.rivers = false;
+        let mut params = GenParams {
+            width: 32,
+            height: 24,
+            erosion: false,
+            rivers: false,
+            ..Default::default()
+        };
 
         let island = params.builder().try_generate().unwrap();
         assert_eq!((island.width(), island.height()), (32, 24));
@@ -1152,10 +1154,12 @@ mod tests {
         assert!(!command.contains("--grey"));
         assert!(!command.contains("--no-erosion"));
 
-        let mut params = GenParams::default();
-        params.land = Land::Borderless;
-        params.erosion = false;
-        params.rivers = false;
+        let params = GenParams {
+            land: Land::Borderless,
+            erosion: false,
+            rivers: false,
+            ..Default::default()
+        };
         let command = cli_line(&params, View::Greyscale);
         assert!(command.contains("--no-island"));
         assert!(command.contains("--no-erosion"));

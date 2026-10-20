@@ -64,7 +64,7 @@ jobs:
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
-        run: cargo clippy --workspace --all-features -- -D warnings
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
       - name: Test (default features)
         run: cargo test --workspace
       - name: Build (library only, no default features)
@@ -119,7 +119,7 @@ jobs:
       - name: Format
         run: cargo fmt --manifest-path gui/Cargo.toml --check
       - name: Clippy
-        run: cargo clippy --manifest-path gui/Cargo.toml --locked -- -D warnings
+        run: cargo clippy --manifest-path gui/Cargo.toml --all-targets --locked -- -D warnings
       - name: Test
         run: cargo test --manifest-path gui/Cargo.toml --locked
 
