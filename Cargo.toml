@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "native/terrain_generator_nif", "native/terrain_generator_ffi"]
+members = [".", "gui", "native/terrain_generator_nif", "native/terrain_generator_ffi"]
 
 [workspace.package]
 # Minimum supported Rust version for every crate here.

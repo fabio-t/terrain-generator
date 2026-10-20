@@ -27,8 +27,22 @@ struct Droplet {
 
 /// Erodes the heightmap (values in `[0, 1]`) in place. `seed` makes droplet
 /// placement deterministic.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn erode(heightmap: &mut Grid<f32>, params: &ErosionParams, seed: u32) {
+    erode_with_progress(heightmap, params, seed, |_, _| {});
+}
+
+/// Same as [`erode`], and calls `on_progress(done, total)` about a hundred
+/// times so a UI can show how far the droplet loop has got. The callback
+/// does not affect the simulation.
+pub fn erode_with_progress(
+    heightmap: &mut Grid<f32>,
+    params: &ErosionParams,
+    seed: u32,
+    mut on_progress: impl FnMut(usize, usize),
+) {
     if heightmap.width() < 3 || heightmap.height() < 3 {
+        on_progress(1, 1);
         return;
     }
 
@@ -42,7 +56,14 @@ pub fn erode(heightmap: &mut Grid<f32>, params: &ErosionParams, seed: u32) {
     let max_x = (heightmap.width() - 1) as f32 - 1e-4;
     let max_y = (heightmap.height() - 1) as f32 - 1e-4;
 
-    for _ in 0..droplets {
+    // A callback per droplet would dominate a fast map. ~100 updates is
+    // enough for a progress bar and stays out of the hot path.
+    let step = (droplets / 100).max(1);
+
+    for i in 0..droplets {
+        if i % step == 0 {
+            on_progress(i, droplets);
+        }
         let mut drop = Droplet {
             x: rng.next_f32() * max_x,
             y: rng.next_f32() * max_y,
@@ -59,6 +80,7 @@ pub fn erode(heightmap: &mut Grid<f32>, params: &ErosionParams, seed: u32) {
             }
         }
     }
+    on_progress(droplets, droplets.max(1));
 }
 
 /// Advances a droplet by one step, eroding or depositing along the way.

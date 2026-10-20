@@ -752,7 +752,35 @@ impl TerrainBuilder {
     /// assert_eq!(err.param, "sea level");
     /// ```
     pub fn try_generate(&self) -> Result<Terrain, ParamError> {
+        self.try_generate_with_progress(|_, _| {})
+    }
+
+    /// Same as [`try_generate`](Self::try_generate), and reports how far the
+    /// pipeline has got. `fraction` moves from `0.0` to `1.0` and never
+    /// backwards. `stage` is a short label such as `"Erosion"` or `"Rivers"`.
+    ///
+    /// Erosion is almost all of the cost, so most of the fraction is spent
+    /// there, updated about a hundred times. The callback is not required
+    /// to be fast, but it should not do heavy work.
+    pub fn try_generate_with_progress(
+        &self,
+        mut report: impl FnMut(f32, &'static str),
+    ) -> Result<Terrain, ParamError> {
         self.validate()?;
+
+        // Weights, not timings. Erosion dominates a normal map; the other
+        // stages are short and only need a visible slice of the bar.
+        let noise_w = 1.0;
+        let erosion_w = if self.erosion.is_some() { 20.0 } else { 0.0 };
+        let breach_w = if self.breach.is_some() { 2.0 } else { 0.0 };
+        let river_w = if self.rivers.is_some() { 2.0 } else { 0.0 };
+        let total = noise_w + erosion_w + breach_w + river_w;
+        let mut cursor = 0.0f32;
+        let mut take = |weight: f32| {
+            let start = cursor;
+            cursor += weight / total;
+            (start, cursor)
+        };
 
         let mask = match (&self.archipelago, &self.island) {
             (Some(arch), _) => Some(base::Mask::Archipelago(arch)),
@@ -760,24 +788,46 @@ impl TerrainBuilder {
             (None, None) => None,
         };
 
+        let (n0, n1) = take(noise_w);
+        report(n0, "Heightmap");
         let mut heightmap = base::generate(self.width, self.height, self.seed, &self.noise, mask);
+        report(n1, "Heightmap");
 
         if let Some(erosion_params) = &self.erosion {
-            erosion::erode(&mut heightmap, erosion_params, self.seed);
+            let (e0, e1) = take(erosion_w);
+            erosion::erode_with_progress(
+                &mut heightmap,
+                erosion_params,
+                self.seed,
+                |done, droplets| {
+                    let t = if droplets == 0 {
+                        1.0
+                    } else {
+                        done as f32 / droplets as f32
+                    };
+                    report(e0 + (e1 - e0) * t, "Erosion");
+                },
+            );
         }
 
         if let Some(breach_params) = &self.breach {
+            let (b0, b1) = take(breach_w);
+            report(b0, "Basins");
             // breaching reshapes the coastline as little as possible, but
             // it needs to know what is already sea
             let ocean = hydrology::ocean_mask(&heightmap, self.sea_level);
             breach::breach(&mut heightmap, &ocean, breach_params);
+            report(b1, "Basins");
         }
 
         let ocean = hydrology::ocean_mask(&heightmap, self.sea_level);
 
         let (flow_accumulation, flow, rivers, lakes) = match &self.rivers {
             Some(river_params) => {
+                let (r0, r1) = take(river_w);
+                report(r0, "Rivers");
                 let hydro = hydrology::compute(&heightmap, &ocean, river_params);
+                report(r1, "Rivers");
                 (hydro.accumulation, hydro.flow, hydro.rivers, hydro.lakes)
             }
             None => (
@@ -787,6 +837,8 @@ impl TerrainBuilder {
                 Grid::new(self.width, self.height, 0),
             ),
         };
+
+        report(1.0, "Done");
 
         Ok(Terrain {
             sea_level: self.sea_level,
@@ -969,6 +1021,36 @@ mod tests {
         assert_eq!(err.param, "river density");
 
         assert!(Terrain::builder().size(16, 16).try_generate().is_ok());
+    }
+
+    #[test]
+    fn progress_advances_to_the_end() {
+        let mut last = -1.0f32;
+        let mut saw_erosion = false;
+        let terrain = Terrain::builder()
+            .size(32, 32)
+            .erosion(ErosionParams {
+                droplets: Some(300),
+                ..Default::default()
+            })
+            .try_generate_with_progress(|fraction, stage| {
+                assert!(
+                    (0.0..=1.0).contains(&fraction),
+                    "fraction {fraction} out of range"
+                );
+                assert!(
+                    fraction + 1e-4 >= last,
+                    "progress went backwards from {last} to {fraction}"
+                );
+                last = fraction;
+                if stage == "Erosion" {
+                    saw_erosion = true;
+                }
+            })
+            .unwrap();
+        assert!(saw_erosion);
+        assert!((last - 1.0).abs() < 1e-4);
+        assert_eq!(terrain.width(), 32);
     }
 
     #[test]
