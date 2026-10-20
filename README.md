@@ -341,7 +341,7 @@ Put it on the classpath and you are done — **no Rust toolchain, nothing to
 install, nothing to build**:
 
 ```sh
-java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.2.1.jar:. YourApp
+java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.3.0.jar:. YourApp
 ```
 
 The binding loads its native library from the first of these that works:

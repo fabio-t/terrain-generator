@@ -7,7 +7,12 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
-## Unreleased
+## 0.3.0 — 2026-10-20
+
+A desktop GUI for tuning, previewing and exporting terrain, contributed by
+@romangrigorii. The libraries gain progress reporting, and `noise` is now
+pinned exactly. The minor version moves because that pin can conflict
+with a different `noise` 0.9 patch in your own dependency graph.
 
 ### GUI
 
@@ -15,8 +20,12 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
   --release`): every CLI generation option as a control, a live preview
   with a per-cell readout, progress while it generates, and export of the
   picture, the 16-bit heightmap, or every layer. It also shows the CLI
-  command that reproduces the current map. Not published to crates.io.
-  Contributed by @romangrigorii (#8).
+  command that reproduces the current map. Its exports are identical to
+  the CLI's for the same settings. Contributed by @romangrigorii (#8).
+- Not among the release downloads yet: build it from a clone with
+  `cargo run -p terrain-gui --release`. It is not published to crates.io.
+  On Linux, its file dialogs use `xdg-desktop-portal`, which desktop
+  sessions run.
 
 ### Rust library
 
@@ -30,8 +39,13 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
   short stage name. `try_generate` is unchanged and now calls it with a
   no-op callback.
 
+### Elixir and Java
+
+- No API changes. The NIF, the C ABI and the jar are rebuilt on the
+  updated dependencies.
+
 No change to generated terrain: the same seed and parameters give the
-same map, progress callback or not.
+same map as 0.2.x, progress callback or not.
 
 ## 0.2.1 — 2026-08-23
 
