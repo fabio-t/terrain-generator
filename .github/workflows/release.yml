@@ -31,7 +31,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain is pinned in mise.toml (see the comment there), and
+      # read from it here so the two cannot disagree. Bash on every runner,
+      # Windows included; the pattern stops at the closing quote so a CRLF
+      # checkout cannot carry a \r into the version.
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
       # **Restores the cache `main`'s CI saved, and never writes its own.**
       # A tag run can restore from its own ref and from the default branch,
       # nothing else, so a cache saved under a tag is read by nobody. This
@@ -62,8 +75,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
           targets: ${{ matrix.target }}
 
       # Saved on branch dispatches, where a second run while preparing a
@@ -134,8 +155,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
           targets: ${{ matrix.target }}
 
       # see the note in the build job

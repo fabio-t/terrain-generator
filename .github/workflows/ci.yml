@@ -23,8 +23,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      # The toolchain is pinned in mise.toml (see the comment there), and
+      # read from it here so the two cannot disagree. The same step is in
+      # every job of both workflows; release.yml runs it on Windows too,
+      # hence bash, and a pattern that stops at the closing quote so a CRLF
+      # checkout cannot carry a \r into the version.
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
@@ -73,7 +86,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
@@ -97,7 +119,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
       # No rust-cache here, on purpose: this job builds only the FFI crate
       # and its handful of dependencies, which took 4.7 s cold (run
       # 39477903683). Saving that cache took longer than the build and

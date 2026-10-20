@@ -1,0 +1,63 @@
+# Toolchain and dev tasks. `mise install` gives you the Rust CI builds with,
+# and `mise run ci` runs the Rust checks CI runs, in the same order.
+#
+# Without mise: install the version below with
+# `rustup toolchain install <version> -c clippy -c rustfmt` and run the
+# commands from the tasks. Any recent stable works for development; the pin
+# is what CI uses.
+
+[tools]
+# **The one place the CI toolchain is chosen.** Every workflow job reads this
+# line (the same `sed` in each) rather than following `stable`.
+#
+# Following `stable` cost a cold build on every Rust release: rust-cache keys
+# on the rustc version, so a new stable invalidated every cache at once and
+# the next run compiled the whole workspace from nothing, the GUI's ~400
+# crates included. A pinned toolchain moves only when someone bumps this
+# line, and the CI run of that commit rebuilds the cache once.
+#
+# Bump it deliberately: a newer clippy brings new lints, and `-D warnings`
+# makes each one a failure. Run `mise run lint` on the new version first.
+#
+# Not the MSRV. That is `rust-version` in Cargo.toml, a promise to the
+# libraries' users that CI checks with its own toolchain.
+rust = "1.99.1"
+
+[tasks.lint]
+description = "Formatting and lints, exactly as CI checks them"
+run = [
+  "cargo fmt --all --check",
+  "cargo clippy --workspace --all-features -- -D warnings",
+]
+
+[tasks.test]
+description = "Rust tests, and the feature combinations CI builds"
+# The two no-default-features builds are there because the library must work
+# without the CLI (clap) and without `png`, and nothing else would notice an
+# import that only compiles with them on.
+run = [
+  "cargo test --workspace",
+  "cargo build --no-default-features",
+  "cargo test --lib --no-default-features --features png",
+]
+
+[tasks.ci]
+description = "The Rust checks CI runs, before you push"
+depends = ["lint", "test"]
+
+[tasks.elixir]
+description = "Elixir checks as CI runs them (needs Elixir and Erlang/OTP)"
+run = [
+  "mix deps.get",
+  "mix format --check-formatted",
+  "mix compile --warnings-as-errors",
+  "mix test",
+]
+
+[tasks.java]
+description = "Java jar and binding tests as CI runs them (needs JDK 22+)"
+run = "./java/build.sh"
+
+[tasks.gui]
+description = "Run the desktop GUI"
+run = "cargo run -p terrain-gui --release"
