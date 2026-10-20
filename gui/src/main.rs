@@ -221,8 +221,13 @@ enum WorkerMsg {
         fraction: f32,
         stage: &'static str,
     },
-    Ready(Ready),
-    Failed { id: u64, error: String },
+    // boxed: a finished map is ~400 bytes against ~30 for a progress tick,
+    // and every progress message would otherwise be that size too
+    Ready(Box<Ready>),
+    Failed {
+        id: u64,
+        error: String,
+    },
 }
 
 fn worker(jobs: Receiver<Job>, out: Sender<WorkerMsg>) {
@@ -236,13 +241,16 @@ fn worker(jobs: Receiver<Job>, out: Sender<WorkerMsg>) {
         let id = job.id;
         // Leave the last sliver for shading the image, so the bar does not
         // read 100% while the preview is still being drawn.
-        let generated = job.params.builder().try_generate_with_progress(|fraction, stage| {
-            let _ = progress_tx.send(WorkerMsg::Progress {
-                id,
-                fraction: fraction * 0.94,
-                stage,
+        let generated = job
+            .params
+            .builder()
+            .try_generate_with_progress(|fraction, stage| {
+                let _ = progress_tx.send(WorkerMsg::Progress {
+                    id,
+                    fraction: fraction * 0.94,
+                    stage,
+                });
             });
-        });
         let msg = match generated {
             Ok(terrain) => {
                 let _ = progress_tx.send(WorkerMsg::Progress {
@@ -251,14 +259,14 @@ fn worker(jobs: Receiver<Job>, out: Sender<WorkerMsg>) {
                     stage: "Rendering",
                 });
                 let rgb = terrain.to_rgb(job.view.style());
-                WorkerMsg::Ready(Ready {
+                WorkerMsg::Ready(Box::new(Ready {
                     id: job.id,
                     params: job.params,
                     view: job.view,
                     terrain,
                     rgb,
                     elapsed: started.elapsed(),
-                })
+                }))
             }
             Err(err) => WorkerMsg::Failed {
                 id: job.id,
@@ -357,8 +365,15 @@ impl TerrainApp {
     fn poll(&mut self, ctx: &egui::Context) {
         while let Ok(msg) = self.results.try_recv() {
             match msg {
-                WorkerMsg::Progress { id, fraction, stage } => {
-                    if id == self.next_id || self.submitted.is_some() {
+                WorkerMsg::Progress {
+                    id,
+                    fraction,
+                    stage,
+                } => {
+                    // a superseded job keeps reporting until the worker
+                    // reaches the newer one; showing its progress would make
+                    // the bar run ahead and then jump back to zero
+                    if id == self.next_id {
                         self.progress = Some(GenProgress { fraction, stage });
                     }
                 }
@@ -366,7 +381,7 @@ impl TerrainApp {
                     if ready.id != self.next_id {
                         continue;
                     }
-                    self.install(ctx, ready);
+                    self.install(ctx, *ready);
                 }
                 WorkerMsg::Failed { id, error } => {
                     if id != self.next_id {
@@ -880,16 +895,17 @@ impl TerrainApp {
 }
 
 impl eframe::App for TerrainApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
         self.readout = None;
-        self.poll(ctx);
-        self.sync_view(ctx);
+        self.poll(&ctx);
+        self.sync_view(&ctx);
 
-        egui::SidePanel::left("controls")
+        egui::Panel::left("controls")
             .resizable(true)
-            .default_width(340.0)
-            .width_range(300.0..=460.0)
-            .show(ctx, |ui| {
+            .default_size(340.0)
+            .size_range(300.0..=460.0)
+            .show(ui, |ui| {
                 ui.heading("Terrain");
                 ui.separator();
                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -897,7 +913,7 @@ impl eframe::App for TerrainApp {
                 });
             });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             self.preview(ui);
         });
 
@@ -913,7 +929,10 @@ fn progress_bar(ui: &mut egui::Ui, progress: GenProgress, started: Option<Instan
     let percent = (progress.fraction.clamp(0.0, 1.0) * 100.0).round();
     ui.add(
         egui::ProgressBar::new(progress.fraction)
-            .text(format!("{}   {percent:.0}%   {elapsed:.1}s", progress.stage))
+            .text(format!(
+                "{}   {percent:.0}%   {elapsed:.1}s",
+                progress.stage
+            ))
             .desired_height(20.0)
             .fill(egui::Color32::from_rgb(64, 128, 196)),
     );

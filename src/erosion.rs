@@ -27,14 +27,9 @@ struct Droplet {
 
 /// Erodes the heightmap (values in `[0, 1]`) in place. `seed` makes droplet
 /// placement deterministic.
-#[cfg_attr(not(test), allow(dead_code))]
-pub fn erode(heightmap: &mut Grid<f32>, params: &ErosionParams, seed: u32) {
-    erode_with_progress(heightmap, params, seed, |_, _| {});
-}
-
-/// Same as [`erode`], and calls `on_progress(done, total)` about a hundred
-/// times so a UI can show how far the droplet loop has got. The callback
-/// does not affect the simulation.
+///
+/// `on_progress(done, total)` is called about a hundred times so a UI can
+/// show how far the droplet loop has got. It does not affect the simulation.
 pub fn erode_with_progress(
     heightmap: &mut Grid<f32>,
     params: &ErosionParams,
@@ -277,7 +272,7 @@ mod tests {
     fn erosion_changes_terrain() {
         let mut map = slope_map(64);
         let before = map.clone();
-        erode(&mut map, &ErosionParams::default(), 1);
+        erode_with_progress(&mut map, &ErosionParams::default(), 1, |_, _| {});
         assert_ne!(map, before);
     }
 
@@ -285,8 +280,8 @@ mod tests {
     fn erosion_is_deterministic() {
         let mut a = slope_map(64);
         let mut b = slope_map(64);
-        erode(&mut a, &ErosionParams::default(), 5);
-        erode(&mut b, &ErosionParams::default(), 5);
+        erode_with_progress(&mut a, &ErosionParams::default(), 5, |_, _| {});
+        erode_with_progress(&mut b, &ErosionParams::default(), 5, |_, _| {});
         assert_eq!(a, b);
     }
 
@@ -294,7 +289,7 @@ mod tests {
     fn erosion_roughly_conserves_mass() {
         let mut map = slope_map(128);
         let before: f32 = map.iter().sum();
-        erode(&mut map, &ErosionParams::default(), 2);
+        erode_with_progress(&mut map, &ErosionParams::default(), 2, |_, _| {});
         let after: f32 = map.iter().sum();
         // sediment leaves the map with droplets that exit the border, so
         // mass can only decrease, and not by much
@@ -305,7 +300,7 @@ mod tests {
     #[test]
     fn no_negative_heights() {
         let mut map = slope_map(64);
-        erode(&mut map, &ErosionParams::default(), 3);
+        erode_with_progress(&mut map, &ErosionParams::default(), 3, |_, _| {});
         assert!(map.iter().all(|v| *v >= 0.0));
     }
 

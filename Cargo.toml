@@ -25,7 +25,17 @@ include = [
 ]
 
 [dependencies]
-noise = "0.9"
+# **Exact pin.** `noise` computes the base heightmap, so its output is part of
+# ours: a patch release that changes one bit changes every stored seed's map.
+# With "0.9", a library user's `cargo update` could pull such a release in
+# without this crate changing. Pinned, a `noise` upgrade reaches users only in
+# a release of ours, which tests/determinism.rs has checked and the CHANGELOG
+# describes.
+#
+# The cost: Cargo allows one 0.9.x per dependency graph, so a user who needs
+# another 0.9 patch for their own code cannot build alongside us until we
+# move the pin. 0.9.0 is the latest release, so nobody is affected today.
+noise = "=0.9.0"
 png = { version = "0.18", optional = true }
 clap = { version = "4", features = ["derive"], optional = true }
 
@@ -45,4 +55,29 @@ name = "terrain-generator"
 required-features = ["cli"]
 
 [profile.release]
+opt-level = 3
+
+# **Tests run optimised code where it matters, and nowhere else.** The test
+# suites generate and erode whole maps, which unoptimised is the slow part:
+# 27 s of the run. Optimising this crate and `noise` (the per-cell sampler)
+# takes it to 5 s and costs nothing measurable to compile. Measured cold,
+# `cargo test --workspace` on 4 cores:
+#
+#                                         compile   run
+#   default (everything opt-level 0)        89 s   27 s
+#   this crate 1, noise 3                   78 s    5 s
+#   every crate 1                          201 s    4 s
+#   this crate 1, every dependency 3       336 s    4 s
+#
+# Warm, with only the workspace crates rebuilt (a CI run off `main`'s
+# cache): 2 s + 26 s before, 2 s + 5 s with this.
+#
+# The blanket `package."*"` override is what islandur uses, but there the
+# dependencies are the hot path; here they are mostly the GUI's eframe and
+# wgpu, which no test runs, and optimising them alone added four minutes.
+# Debug assertions and overflow checks stay on: opt-level does not touch them.
+[profile.dev.package.terrain-generator]
+opt-level = 1
+
+[profile.dev.package.noise]
 opt-level = 3

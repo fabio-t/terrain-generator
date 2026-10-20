@@ -10,9 +10,10 @@ that **rivers follow the eroded valleys** and depressions become lakes.
 
 ![example map](docs/example.png)
 
-It is usable four ways:
+It is usable five ways:
 
 - as a **CLI** that renders maps to PNG,
+- as a **desktop GUI** for trying settings with a live preview,
 - as a **Rust library** (`cargo` dependency),
 - as an **Elixir library** via a Rustler NIF (`mix` dependency),
 - as a **Java library** via the Foreign Function & Memory API — and, through
@@ -226,6 +227,28 @@ quantisation (8 bits would terrace the elevation); the masks are 8-bit
 black/white. `shaded` is also available as a layer name, and remains the
 default when `--layers` is not given.
 
+## Desktop GUI
+
+![the desktop GUI](docs/gui.png)
+
+```sh
+cargo run -p terrain-gui --release
+```
+
+Every CLI generation option as a control, a preview that shows the height
+and water type of the cell under the pointer, and export of the picture,
+the 16-bit heightmap or all layers. **Generate** builds the map on a
+background thread; the *CLI command* panel gives the `terrain-generator`
+invocation for the current settings, and its exports match the CLI's
+byte for byte. Use `--release`: erosion is many times slower in a debug
+build.
+
+On Linux the file dialogs go through the desktop portal
+(`xdg-desktop-portal`), which every desktop session runs.
+
+Contributed by [@romangrigorii](https://github.com/romangrigorii) in
+[#8](https://github.com/fabio-t/terrain-generator/pull/8).
+
 ## Rust library
 
 ```toml
@@ -259,10 +282,11 @@ Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
 ### Determinism and stored worlds
 
 The same seed and parameters always produce the same terrain. If you
-persist worlds **as seeds** and regenerate them on load, pin an exact tag
-or revision of this crate and commit your `Cargo.lock` — output depends on
-the `noise` crate and on tuning here, so any change to it is a breaking
-change for your saves.
+persist worlds **as seeds** and regenerate them on load, pin an exact version
+of this crate and commit your `Cargo.lock`. Any change to the output is a
+breaking change for your saves. The output also depends on the `noise`
+crate, which this crate pins to an exact version, so `noise` changes
+only when this crate does.
 
 One exception to cross-platform bit-exactness: the normalised `flow` layer
 is computed with `f32::ln`, whose last-bit rounding can differ between

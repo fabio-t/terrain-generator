@@ -7,6 +7,32 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
+## Unreleased
+
+### GUI
+
+- New `terrain-gui` desktop app in `gui/` (`cargo run -p terrain-gui
+  --release`): every CLI generation option as a control, a live preview
+  with a per-cell readout, progress while it generates, and export of the
+  picture, the 16-bit heightmap, or every layer. It also shows the CLI
+  command that reproduces the current map. Not published to crates.io.
+  Contributed by @romangrigorii (#8).
+
+### Rust library
+
+- `noise` is pinned to exactly 0.9.0. Before, it was `0.9`, so a
+  `cargo update` could pull in a new 0.9 patch release, and with it
+  different terrain, without this crate changing. If your own code
+  depends on a different 0.9 patch of `noise`, it can no longer build
+  alongside this crate.
+- `TerrainBuilder::try_generate_with_progress` reports how far generation
+  has got, as a fraction from 0 to 1 that never goes backwards plus a
+  short stage name. `try_generate` is unchanged and now calls it with a
+  no-op callback.
+
+No change to generated terrain: the same seed and parameters give the
+same map, progress callback or not.
+
 ## 0.2.1 — 2026-08-23
 
 ### Java
