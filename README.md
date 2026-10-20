@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml)
 [![Latest Github release](https://img.shields.io/github/release/fabio-t/terrain-generator.svg)](https://github.com/fabio-t/terrain-generator/releases/latest)
+[![crates.io](https://img.shields.io/crates/v/terrain-generator.svg)](https://crates.io/crates/terrain-generator)
+[![Hex.pm](https://img.shields.io/hexpm/v/terrain_generator.svg)](https://hex.pm/packages/terrain_generator)
+[![docs.rs](https://img.shields.io/docsrs/terrain-generator)](https://docs.rs/terrain-generator)
 
 Procedural terrain generator written in Rust. It builds a fractal-noise
 heightmap, shapes it into an island with noisy coastlines, carves it with
@@ -68,8 +71,11 @@ checksums.
 Requires a [Rust toolchain](https://rustup.rs) (1.91 or newer):
 
 ```sh
-cargo install --git https://github.com/fabio-t/terrain-generator terrain-generator
+cargo install terrain-generator
 ```
+
+Add `--git https://github.com/fabio-t/terrain-generator` for the
+unreleased state of `main`.
 
 ### From a clone
 
@@ -255,8 +261,10 @@ Contributed by [@romangrigorii](https://github.com/romangrigorii) in
 [dependencies]
 # add features = ["png"] if you want PNG file output; without it the
 # library's only dependency is the `noise` crate
-terrain-generator = { git = "https://github.com/fabio-t/terrain-generator", default-features = false }
+terrain-generator = { version = "0.3", default-features = false }
 ```
+
+API documentation is on [docs.rs](https://docs.rs/terrain-generator).
 
 ```rust
 use terrain_generator::{RenderStyle, Terrain};
@@ -295,13 +303,14 @@ use only IEEE-exact operations and are identical everywhere.
 
 ## Elixir library
 
-The repository is also a Mix package wrapping the same Rust core through
-[Rustler](https://hexdocs.pm/rustler). Erlang/OTP 24+, Elixir 1.15+ and
-Rust 1.91+ (required by Rustler 0.38) are needed at compile time.
+A [Hex package](https://hex.pm/packages/terrain_generator) wraps the same
+Rust core through [Rustler](https://hexdocs.pm/rustler). The NIF compiles
+from source when you fetch it, so Erlang/OTP 24+, Elixir 1.15+ and Rust
+1.91+ (required by Rustler 0.38) are needed at compile time.
 
 ```elixir
 def deps do
-  [{:terrain_generator, github: "fabio-t/terrain-generator"}]
+  [{:terrain_generator, "~> 0.3"}]
 end
 ```
 
@@ -317,7 +326,8 @@ Heightmap, flow, river and lake buffers are returned as plain binaries
 (32-bit floats / bytes), cheap to pass around the BEAM. The NIF runs on a
 dirty CPU scheduler, so generation never blocks your schedulers.
 
-Full reference: [docs/elixir_api.md](docs/elixir_api.md), or `mix docs`.
+Full reference: [HexDocs](https://hexdocs.pm/terrain_generator), or
+[docs/elixir_api.md](docs/elixir_api.md).
 
 ## Java library
 

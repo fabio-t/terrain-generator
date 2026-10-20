@@ -14,6 +14,11 @@ A desktop GUI for tuning, previewing and exporting terrain, contributed by
 pinned exactly. The minor version moves because that pin can conflict
 with a different `noise` 0.9 patch in your own dependency graph.
 
+This is the first release published to
+[crates.io](https://crates.io/crates/terrain-generator) and
+[Hex](https://hex.pm/packages/terrain_generator), so neither library
+needs a git dependency any more.
+
 ### GUI
 
 - New `terrain-gui` desktop app in `gui/` (`cargo run --release
@@ -31,6 +36,9 @@ with a different `noise` 0.9 patch in your own dependency graph.
 
 ### Rust library
 
+- On crates.io: `terrain-generator = { version = "0.3",
+  default-features = false }`, and `cargo install terrain-generator` for
+  the CLI. API documentation is on docs.rs.
 - `noise` is pinned to exactly 0.9.0. Before, it was `0.9`, so a
   `cargo update` could pull in a new 0.9 patch release, and with it
   different terrain, without this crate changing. If your own code
@@ -43,8 +51,11 @@ with a different `noise` 0.9 patch in your own dependency graph.
 
 ### Elixir and Java
 
-- No API changes. The NIF, the C ABI and the jar are rebuilt on the
-  updated dependencies.
+- The Elixir library is on Hex: `{:terrain_generator, "~> 0.3"}`. The
+  NIF still compiles from source, so Rust 1.91+ is needed at compile
+  time. Documentation is on HexDocs.
+- No API changes in either. The NIF, the C ABI and the jar are rebuilt
+  on the updated dependencies.
 
 No change to generated terrain: the same seed and parameters give the
 same map as 0.2.x, progress callback or not.

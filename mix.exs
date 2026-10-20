@@ -35,10 +35,17 @@ defmodule TerrainGenerator.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
+      # Cargo builds a crate only when every member of its workspace is
+      # present, so this lists all of them: the NIF, the core library and
+      # the C ABI crate. CI builds the NIF from the unpacked package to
+      # keep this list honest. The GUI is a workspace of its own and not
+      # needed.
       files: [
         "lib",
         "native/terrain_generator_nif/src",
         "native/terrain_generator_nif/Cargo.toml",
+        "native/terrain_generator_ffi/src",
+        "native/terrain_generator_ffi/Cargo.toml",
         "src",
         "Cargo.toml",
         "Cargo.lock",
