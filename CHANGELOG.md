@@ -16,14 +16,16 @@ with a different `noise` 0.9 patch in your own dependency graph.
 
 ### GUI
 
-- New `terrain-gui` desktop app in `gui/` (`cargo run -p terrain-gui
-  --release`): every CLI generation option as a control, a live preview
-  with a per-cell readout, progress while it generates, and export of the
-  picture, the 16-bit heightmap, or every layer. It also shows the CLI
-  command that reproduces the current map. Its exports are identical to
-  the CLI's for the same settings. Contributed by @romangrigorii (#8).
-- Not among the release downloads yet: build it from a clone with
-  `cargo run -p terrain-gui --release`. It is not published to crates.io.
+- New `terrain-gui` desktop app in `gui/` (`cargo run --release
+  --manifest-path gui/Cargo.toml`): every CLI generation option as a
+  control, a live preview with a per-cell readout, progress while it
+  generates, and export of the picture, the 16-bit heightmap, or every
+  layer. It also shows the CLI command that reproduces the current map.
+  Its exports are identical to the CLI's for the same settings.
+  Contributed by @romangrigorii (#8).
+- Not among the release downloads yet: build it from a clone with the
+  command above. It is not published to crates.io, and it is a separate
+  Cargo workspace, so none of the libraries depend on it or ship it.
   On Linux, its file dialogs use `xdg-desktop-portal`, which desktop
   sessions run.
 

@@ -12,8 +12,8 @@
 #
 # Following `stable` cost a cold build on every Rust release: rust-cache keys
 # on the rustc version, so a new stable invalidated every cache at once and
-# the next run compiled the whole workspace from nothing, the GUI's ~400
-# crates included. A pinned toolchain moves only when someone bumps this
+# the next run compiled everything from nothing, the GUI's ~440 crates
+# included. A pinned toolchain moves only when someone bumps this
 # line, and the CI run of that commit rebuilds the cache once.
 #
 # Bump it deliberately: a newer clippy brings new lints, and `-D warnings`
@@ -28,6 +28,9 @@ description = "Formatting and lints, exactly as CI checks them"
 run = [
   "cargo fmt --all --check",
   "cargo clippy --workspace --all-features -- -D warnings",
+  # the GUI is its own workspace, which --all and --workspace do not reach
+  "cargo fmt --manifest-path gui/Cargo.toml --check",
+  "cargo clippy --manifest-path gui/Cargo.toml -- -D warnings",
 ]
 
 [tasks.test]
@@ -39,6 +42,7 @@ run = [
   "cargo test --workspace",
   "cargo build --no-default-features",
   "cargo test --lib --no-default-features --features png",
+  "cargo test --manifest-path gui/Cargo.toml",
 ]
 
 [tasks.ci]
@@ -60,4 +64,4 @@ run = "./java/build.sh"
 
 [tasks.gui]
 description = "Run the desktop GUI"
-run = "cargo run -p terrain-gui --release"
+run = "cargo run --release --manifest-path gui/Cargo.toml"

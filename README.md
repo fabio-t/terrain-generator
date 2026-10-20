@@ -232,7 +232,7 @@ default when `--layers` is not given.
 ![the desktop GUI](docs/gui.png)
 
 ```sh
-cargo run -p terrain-gui --release
+cargo run --release --manifest-path gui/Cargo.toml
 ```
 
 Every CLI generation option as a control, a preview that shows the height

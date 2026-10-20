@@ -3,12 +3,27 @@ name = "terrain-gui"
 version = "0.1.0"
 edition = "2021"
 publish = false
-# No `rust-version`: the workspace MSRV is a promise to the libraries'
-# consumers, and this is an app built with current stable. CI's MSRV check
-# excludes it, so eframe raising its own MSRV cannot force the libraries'.
+# No `rust-version`: the MSRV in ../Cargo.toml is a promise to the libraries'
+# consumers, and this is an app built with the toolchain pinned in mise.toml.
+# Being its own workspace keeps it out of the MSRV check, so eframe raising
+# its own MSRV cannot force the libraries'.
 description = "Interactive preview and export for the terrain generator"
 
 [dependencies]
 eframe = "0.37"
 rfd = "0.17"
 terrain-generator = { path = "..", default-features = false, features = ["png"] }
+
+# Its own workspace, not a member of the libraries' (see the comment on
+# `exclude` in ../Cargo.toml). Build it with `--manifest-path gui/Cargo.toml`
+# from the root, or from this directory; it has its own Cargo.lock.
+[workspace]
+
+# Profiles only apply from a workspace root, so these repeat the root's
+# choice for the crates that do the work: a debug build of the GUI still
+# generates a map in seconds rather than half a minute.
+[profile.dev.package.terrain-generator]
+opt-level = 1
+
+[profile.dev.package.noise]
+opt-level = 3

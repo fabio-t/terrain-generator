@@ -21,6 +21,8 @@ CI's pinned toolchain (see `AGENTS.md`).
 - [ ] `cargo fmt --all --check`
 - [ ] `cargo clippy --workspace --all-features -- -D warnings`
 - [ ] `cargo test --workspace`
+- [ ] The same three for the GUI with `--manifest-path gui/Cargo.toml`, if
+      you touched `gui/` or the library's API (the GUI is its own workspace)
 - [ ] `cargo build --no-default-features`, if you touched features or
       imports (the library must build without the CLI and `png`)
 - [ ] `mix format --check-formatted && mix test`, if you touched `lib/`,
@@ -30,8 +32,8 @@ CI's pinned toolchain (see `AGENTS.md`).
 
 ## Versions and pins
 
-- [ ] `Cargo.lock` is committed alongside any dependency change (CI builds
-      with `--locked`)
+- [ ] `Cargo.lock` (and `gui/Cargo.lock` for the GUI) is committed
+      alongside any dependency change (CI builds with `--locked`)
 - [ ] The libraries still build on the MSRV in `Cargo.toml`
       (`rust-version`). If you need a newer Rust, bump it and say why; the
       GUI is exempt

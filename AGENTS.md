@@ -16,12 +16,17 @@ breaching, then hydrology: rivers, lakes and ocean. One core, five ways in:
 |----------------|-------------------------------|--------------------------------------------|
 | Rust library   | `src/` (`lib.rs`)             | Published to crates.io                     |
 | CLI            | `src/main.rs`                 | `cli` feature, on by default               |
-| Desktop GUI    | `gui/`                        | eframe app, `publish = false`              |
+| Desktop GUI    | `gui/`                        | eframe app, its own workspace, not published |
 | Elixir library | `lib/`, `native/terrain_generator_nif/` | Rustler NIF                       |
 | Java library   | `java/`, `native/terrain_generator_ffi/` | C ABI + Foreign Function & Memory API |
 
 Integration tests are in `tests/`, and Elixir tests in `test/`. API docs
 per language are in `docs/`.
+
+The GUI is a separate Cargo workspace with its own `gui/Cargo.lock`, so
+the libraries never resolve eframe and the Hex package ships no GUI code.
+Cargo commands run from the root do not reach it: use
+`--manifest-path gui/Cargo.toml`, as `mise.toml`'s tasks do.
 
 ## Rules
 
@@ -35,7 +40,7 @@ per language are in `docs/`.
    (`=0.9.0`) and an upgrade is held to the same bar: move the pin by hand,
    run the goldens, and say so in the CHANGELOG.
 2. **The libraries keep an MSRV.** `rust-version` in `Cargo.toml` is
-   currently set by rustler. CI checks every crate except the GUI against
+   currently set by rustler. CI checks the libraries' workspace against
    it. Code in `src/` and `native/` must build on that version. The GUI is
    an app built with the pinned toolchain and is exempt.
 3. **The library builds without its defaults.** `cli` (clap) and `png` are
@@ -47,7 +52,8 @@ per language are in `docs/`.
 5. **Versions move together, at release time.** The version is in
    `Cargo.toml`, both `native/*/Cargo.toml`, `mix.exs`, and the jar name in
    `README.md` and `docs/java_api.md`. A feature PR bumps none of them.
-6. **`Cargo.lock` is committed**, and CI builds with `--locked`.
+6. **Both lockfiles are committed** (`Cargo.lock`, `gui/Cargo.lock`), and
+   CI builds with `--locked`.
 
 ## Checks
 
