@@ -8,6 +8,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A dispatch that lands while an earlier one on the same branch is still
+# going supersedes it: only the tip needs to be known-good.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -21,6 +27,22 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          # shared with release.yml's test job, which builds the same tree:
+          # a tag can only restore `main`'s caches, so this is the one it gets
+          shared-key: workspace
+          # A failed run has still paid to compile the dependencies (with the
+          # GUI that is eframe and wgpu, ~400 crates). Without this they are
+          # thrown away and the push that fixes the failure starts cold.
+          cache-on-failure: true
+          # **Only `main` writes a cache; every branch reads `main`'s.**
+          # A cache saved on a branch can only ever be restored by that same
+          # branch, so dispatches on topic branches stored copies nothing
+          # else would read -- and the repo's cache budget is LRU-evicted, so
+          # those copies push out `main`'s, the one every run falls back to.
+          # A branch that changes Cargo.lock builds the difference cold until
+          # it merges; the first `main` run afterwards stores it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
@@ -32,7 +54,10 @@ jobs:
       - name: Test (png feature only)
         run: cargo test --lib --no-default-features --features png
 
-      # keeps the declared rust-version honest: bump it here if this fails
+      # keeps the declared rust-version honest: bump it here if this fails.
+      # The GUI is left out: it is an unpublished app built with stable, and
+      # checking it here would let eframe's MSRV dictate the libraries'
+      # (and compile its ~400 crates a second time with another toolchain).
       - name: Verify MSRV (rust-version in Cargo.toml)
         run: |
           MSRV=$(cargo metadata --format-version 1 --no-deps | python3 -c "
@@ -41,7 +66,7 @@ jobs:
           print(max(vs, key=lambda v: tuple(int(x) for x in v.split('.'))))")
           echo "declared MSRV: $MSRV"
           rustup toolchain install "$MSRV" --profile minimal
-          cargo +"$MSRV" check --workspace --locked
+          cargo +"$MSRV" check --workspace --exclude terrain-gui --locked
 
   elixir:
     name: Elixir
@@ -50,6 +75,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          # see the note in the Rust job
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29"
@@ -69,7 +98,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      # No rust-cache here, on purpose: this job builds only the FFI crate
+      # and its handful of dependencies, which took 4.7 s cold (run
+      # 39477903683). Saving that cache took longer than the build and
+      # stored ~95 MB (mostly the crates.io registry) against the repo's
+      # cache budget, where it competes with the Rust job's cache, which
+      # does save minutes.
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

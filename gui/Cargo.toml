@@ -3,6 +3,9 @@ name = "terrain-gui"
 version = "0.1.0"
 edition = "2021"
 publish = false
+# No `rust-version`: the workspace MSRV is a promise to the libraries'
+# consumers, and this is an app built with current stable. CI's MSRV check
+# excludes it, so eframe raising its own MSRV cannot force the libraries'.
 description = "Interactive preview and export for the terrain generator"
 
 [dependencies]

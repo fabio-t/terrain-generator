@@ -32,7 +32,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # **Restores the cache `main`'s CI saved, and never writes its own.**
+      # A tag run can restore from its own ref and from the default branch,
+      # nothing else, so a cache saved under a tag is read by nobody. This
+      # job builds what ci.yml's Rust job builds (the whole workspace, GUI
+      # included), so it shares that job's key and starts warm off `main`.
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace
+          save-if: false
       - run: cargo test --workspace --locked
 
   build:
@@ -58,9 +66,12 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # Saved on branch dispatches, where a second run while preparing a
+      # release reuses it; not on tags, whose caches nothing can restore.
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+          save-if: ${{ github.ref_type != 'tag' }}
 
       - name: Build
         run: cargo build --release --locked -p terrain-generator --target ${{ matrix.target }}
@@ -127,9 +138,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # see the note in the build job
       - uses: Swatinem/rust-cache@v2
         with:
           key: ffi-${{ matrix.target }}
+          save-if: ${{ github.ref_type != 'tag' }}
 
       - uses: actions/setup-java@v5
         with:
