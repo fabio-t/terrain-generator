@@ -110,10 +110,11 @@ tagged until the release PR, the one that moves the version (rule 5), has
 had four passes, and its description records what each found:
 
 1. **Dependencies.** Everything is on its latest release, or the PR says
-   why not: both lockfiles, `mix.lock`, the GitHub Actions, the pinned
-   toolchain. The libraries still build on the MSRV.
-2. **Security.** No known advisory in either lockfile or `mix.lock`
-   (`cargo audit`, `mix hex.audit`). The `unsafe` code in `native/` is
+   why not: both lockfiles (`cargo update --dry-run --verbose` lists what
+   is held back), the Hex dependencies in `mix.exs`, the GitHub Actions,
+   the pinned toolchain. The libraries still build on the MSRV.
+2. **Security.** No known advisory in either lockfile (`cargo audit`), and
+   no retired Hex package (`mix hex.audit`). The `unsafe` code in `native/` is
    re-read: every pointer, length and size crossing the C ABI and the NIF
    is checked before use. Workflow permissions are the least each job
    needs, and no secret reaches a job that does not publish.
