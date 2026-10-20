@@ -156,6 +156,13 @@ the individual rivers are visible.
 <td align="center"><img src="docs/options/rivers-004.png" width="240"><br><code>--rivers 0.04</code></td>
 </tr></table>
 
+A share of the land gives a different river network at every map size.
+Two thresholds hold steady instead, and either replaces `--rivers`:
+`--river-min-upstream N` makes a river wherever at least `N` cells drain
+through, for when a cell has a fixed real-world size, and
+`--river-per-edge K` wherever the catchment reaches `K` times the longer
+map edge, for a same-looking network at every resolution.
+
 ### Sea level — `--sea-level`
 
 Cells at or below this elevation are ocean. Raising it drowns the
@@ -172,7 +179,9 @@ lowlands and turns valley systems into fjord-like inlets.
 `--frequency` is the number of large features across the map (defaults to
 `2.5`): lower gives one big landmass, higher gives busier, more broken
 terrain. `--octaves` (default `8`) controls fine detail; fewer octaves
-give smoother, softer relief.
+give smoother, softer relief. Between octaves, `--lacunarity` (default
+`2`) multiplies the frequency and `--persistence` (default `0.5`) the
+amplitude: a higher persistence keeps more of the fine detail.
 
 <table><tr>
 <td align="center"><img src="docs/options/frequency-15.png" width="240"><br><code>--frequency 1.5</code></td>
