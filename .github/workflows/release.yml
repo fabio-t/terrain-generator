@@ -16,8 +16,13 @@ on:
   # a branch without burning a tag.
   workflow_dispatch:
 
+# **Read-only by default; only the job that creates the release may
+# write.** The build jobs compile and run code from every dependency, on
+# runners for three operating systems, and none of them needs to change
+# the repository. A token that can push or rewrite a release is handed
+# only to the one job that does.
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -31,6 +36,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # **A tag that disagrees with the version stops the release here,
+      # before anything is built.** The registries publish what the
+      # manifests say, not what the tag says: a v0.4.0 tag on a commit
+      # still at 0.3.0 would make a GitHub release called v0.4.0 and then
+      # fail to republish 0.3.0. A pre-release tag (v0.4.0-rc1) is checked
+      # against its base version, which the manifests already carry.
+      - name: Check the tag matches the version
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          want="${tag%%-*}"
+          bad=0
+          for f in Cargo.toml native/terrain_generator_nif/Cargo.toml \
+                   native/terrain_generator_ffi/Cargo.toml mix.exs; do
+            have=$(sed -n -e 's/^version = "\(.*\)"$/\1/p' \
+                          -e 's/^  @version "\(.*\)"$/\1/p' "$f" | head -1)
+            if [ "$have" != "$want" ]; then
+              echo "::error file=$f::version is '$have', the tag says $want"
+              bad=1
+            fi
+          done
+          exit $bad
       # The toolchain is pinned in mise.toml (see the comment there), and
       # read from it here so the two cannot disagree. Bash on every runner,
       # Windows included; the pattern stops at the closing quote so a CRLF
@@ -48,8 +76,9 @@ jobs:
       # **Restores the cache `main`'s CI saved, and never writes its own.**
       # A tag run can restore from its own ref and from the default branch,
       # nothing else, so a cache saved under a tag is read by nobody. This
-      # job builds what ci.yml's Rust job builds (the whole workspace, GUI
-      # included), so it shares that job's key and starts warm off `main`.
+      # job builds what ci.yml's Rust job builds (the libraries' workspace;
+      # the GUI is not released), so it shares that job's key and starts warm
+      # off `main`.
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: workspace
@@ -267,6 +296,9 @@ jobs:
     # tested every artefact the release would have carried.
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    permissions:
+      # creates the release and uploads its assets
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -325,3 +357,106 @@ jobs:
           body_path: notes.md
           # commit list is appended below the CHANGELOG text
           generate_release_notes: true
+
+  # **The registries come last**, once every artefact is built and the
+  # GitHub release exists: a version on crates.io or Hex can never be
+  # deleted or replaced, only retired. Pre-release tags stop at the
+  # GitHub release for the same reason.
+  #
+  # Each job skips when the version is already there, so a release
+  # re-run after a failure (or after publishing by hand) finishes rather
+  # than failing on the duplicate.
+  crates-io:
+    name: Publish to crates.io
+    needs: release
+    if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Trusted publishing: crates.io exchanges this job's OIDC token for a
+      # publish token that lives for 30 minutes, so the repository stores
+      # no crates.io secret. It is configured on the crate's settings page
+      # on crates.io, which exists only once the crate does, so the first
+      # version had to be published by hand.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+      - name: Check whether this version is already published
+        id: published
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -A 'terrain-generator release workflow (github.com/fabio-t/terrain-generator)' \
+            "https://crates.io/api/v1/crates/terrain-generator/${GITHUB_REF_NAME#v}")
+          echo "crates.io answered $code"
+          if [ "$code" = 200 ]; then
+            echo "::notice::terrain-generator ${GITHUB_REF_NAME#v} is already on crates.io"
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: rust-lang/crates-io-auth-action@v1
+        if: steps.published.outputs.yes != 'true'
+        id: auth
+      - name: Publish
+        if: steps.published.outputs.yes != 'true'
+        run: cargo publish -p terrain-generator --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  hex:
+    name: Publish to Hex
+    needs: release
+    if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      # `mix hex.publish` builds the docs, which compiles the project and so
+      # the NIF: it needs the same Rust the rest of the release used.
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+      # the versions ci.yml's Elixir job tests with
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20"
+      - name: Check whether this version is already published
+        id: published
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://hex.pm/api/packages/terrain_generator/releases/${GITHUB_REF_NAME#v}")
+          echo "hex.pm answered $code"
+          if [ "$code" = 200 ]; then
+            echo "::notice::terrain_generator ${GITHUB_REF_NAME#v} is already on Hex"
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Hex has no trusted publishing, so this is an API key with only the
+      # api:write permission, stored as a repository secret.
+      - name: Publish
+        if: steps.published.outputs.yes != 'true'
+        run: |
+          if [ -z "$HEX_API_KEY" ]; then
+            echo "::error::the HEX_API_KEY repository secret is not set"
+            exit 1
+          fi
+          mix deps.get --check-locked
+          mix hex.publish --yes
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

@@ -1,7 +1,8 @@
-# Toolchain and dev tasks. `mise install` gives you the Rust CI builds with,
-# and `mise run ci` runs the Rust checks CI runs, in the same order.
+# Toolchains and dev tasks. `mise install` gives you the Rust, Erlang/OTP,
+# Elixir and JDK that CI builds with, and `mise run ci` runs the Rust checks
+# CI runs, in the same order.
 #
-# Without mise: install the version below with
+# Without mise: install the Rust version below with
 # `rustup toolchain install <version> -c clippy -c rustfmt` and run the
 # commands from the tasks. Any recent stable works for development; the pin
 # is what CI uses.
@@ -12,8 +13,8 @@
 #
 # Following `stable` cost a cold build on every Rust release: rust-cache keys
 # on the rustc version, so a new stable invalidated every cache at once and
-# the next run compiled the whole workspace from nothing, the GUI's ~400
-# crates included. A pinned toolchain moves only when someone bumps this
+# the next run compiled everything from nothing, the GUI's ~440 crates
+# included. A pinned toolchain moves only when someone bumps this
 # line, and the CI run of that commit rebuilds the cache once.
 #
 # Bump it deliberately: a newer clippy brings new lints, and `-D warnings`
@@ -23,11 +24,23 @@
 # libraries' users that CI checks with its own toolchain.
 rust = "1.99.1"
 
+# **The bindings' runtimes**, the versions CI's Elixir and Java jobs set up
+# (`setup-beam` and `setup-java` in the workflows; keep them matching).
+# Each is a prebuilt download, a few seconds apiece. They sit here rather
+# than as task-scoped `tools` because mise installs Elixir by running it,
+# which needs `erl` on the PATH, and only `[tools]` provides that.
+erlang = "29"
+elixir = "1.20-otp-29"
+java = "temurin-25"
+
 [tasks.lint]
 description = "Formatting and lints, exactly as CI checks them"
 run = [
   "cargo fmt --all --check",
-  "cargo clippy --workspace --all-features -- -D warnings",
+  "cargo clippy --workspace --all-features --all-targets -- -D warnings",
+  # the GUI is its own workspace, which --all and --workspace do not reach
+  "cargo fmt --manifest-path gui/Cargo.toml --check",
+  "cargo clippy --manifest-path gui/Cargo.toml --all-targets -- -D warnings",
 ]
 
 [tasks.test]
@@ -39,6 +52,7 @@ run = [
   "cargo test --workspace",
   "cargo build --no-default-features",
   "cargo test --lib --no-default-features --features png",
+  "cargo test --manifest-path gui/Cargo.toml",
 ]
 
 [tasks.ci]
@@ -46,7 +60,7 @@ description = "The Rust checks CI runs, before you push"
 depends = ["lint", "test"]
 
 [tasks.elixir]
-description = "Elixir checks as CI runs them (needs Elixir and Erlang/OTP)"
+description = "Elixir checks as CI runs them"
 run = [
   "mix deps.get",
   "mix format --check-formatted",
@@ -55,9 +69,9 @@ run = [
 ]
 
 [tasks.java]
-description = "Java jar and binding tests as CI runs them (needs JDK 22+)"
+description = "Java jar and binding tests as CI runs them"
 run = "./java/build.sh"
 
 [tasks.gui]
 description = "Run the desktop GUI"
-run = "cargo run -p terrain-gui --release"
+run = "cargo run --release --manifest-path gui/Cargo.toml"

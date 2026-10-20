@@ -91,7 +91,7 @@ different seeds via `.seed(n)`).
 
 | Method | Default | Description |
 |--------|---------|-------------|
-| `.size(width, height)` | `512 × 512` | Map dimensions in cells. |
+| `.size(width, height)` | `512 × 512` | Map dimensions in cells. `width * height` must be at most `MAX_CELLS` (2³² − 1, so 65535 × 65535). |
 | `.seed(u32)` | `0` | Generation seed. |
 | `.sea_level(f32)` | `0.08` | Sea level in `[0, 1)`. |
 | `.noise(NoiseParams)` | see below | Fractal noise parameters. |
@@ -102,6 +102,7 @@ different seeds via `.seed(n)`).
 | `.rivers(RiverParams)` / `.no_rivers()` | enabled | Flow routing, rivers and lakes. |
 | `.generate()` | — | Validates all parameters, runs the pipeline, returns a `Terrain`. Panics on invalid parameters. |
 | `.try_generate()` | — | Same, but returns `Result<Terrain, ParamError>`. |
+| `.try_generate_with_progress(\|fraction, stage\| ...)` | — | Same as `try_generate()`, and calls back with the fraction done (`0.0` to `1.0`, never backwards) and a stage label such as `"Erosion"`. |
 
 All validation happens when generating. `generate()` **panics with a
 descriptive message** on out-of-range parameters, treating them as a
@@ -183,7 +184,22 @@ The defaults work well for maps between 256² and 2048²; usually only
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `density: f32` | `0.01` | Approximate fraction of land cells covered by rivers. |
+| `threshold: RiverThreshold` | `Density(0.01)` | How the river network is cut out of flow accumulation. |
+
+Build it with one of the constructors, one per `RiverThreshold` variant:
+
+| Constructor | Range | A cell is a river when |
+|-------------|-------|------------------------|
+| `RiverParams::density(f)` | `[0, 1]` | it is in the top `f` of land cells by upstream catchment, so rivers cover about `f` of the land. |
+| `RiverParams::min_upstream_cells(n)` | `≥ 0` | at least `n` cells drain through it. |
+| `RiverParams::per_edge(k)` | `≥ 0` | at least `k × max(width, height)` cells drain through it. |
+
+`density` is relative, so it reads the same on every map, but a small map
+gets a visually denser network than a large one at the same value:
+catchments grow with area, channels with length. `min_upstream_cells` is
+absolute, the choice when a cell has a fixed real-world size, as in a
+world tiled from several maps. `per_edge` scales with the map edge, for a
+map that is always "one island" whatever its resolution.
 
 ### `ArchipelagoParams`
 
@@ -199,6 +215,8 @@ or mask-less output.
 | `spread: f32` | `0.85` | How much of the map centres may spread over, in `[0, 1]`. |
 | `min_spacing: f32` | `0.22` | Minimum centre spacing as a fraction of the shorter map side (best-effort). |
 | `coast_noise: f32` | `1.0` | Coastline perturbation, as for a single island. |
+
+`ArchipelagoParams::with_islands(n)` is the defaults with `n` islands.
 
 The mask is the union of per-island radial falloffs — the single-island
 formula with `d³` replaced by the *nearest* island's `d³` — so islands
@@ -328,7 +346,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             droplets: Some(2_000_000), // extra-deep valleys
             ..Default::default()
         })
-        .rivers(RiverParams { density: 0.015 });
+        .rivers(RiverParams::density(0.015));
 
     for seed in 0..10 {
         let terrain = builder.clone().seed(seed).generate();

@@ -14,6 +14,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Nothing here writes to the repository. Without this, the token gets the
+# repository's default permissions, which can include write access.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -44,9 +49,9 @@ jobs:
           # shared with release.yml's test job, which builds the same tree:
           # a tag can only restore `main`'s caches, so this is the one it gets
           shared-key: workspace
-          # A failed run has still paid to compile the dependencies (with the
-          # GUI that is eframe and wgpu, ~400 crates). Without this they are
-          # thrown away and the push that fixes the failure starts cold.
+          # A failed run has still paid to compile the dependencies. Without
+          # this they are thrown away and the push that fixes the failure
+          # starts cold.
           cache-on-failure: true
           # **Only `main` writes a cache; every branch reads `main`'s.**
           # A cache saved on a branch can only ever be restored by that same
@@ -59,18 +64,22 @@ jobs:
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
-        run: cargo clippy --workspace --all-features -- -D warnings
+        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
       - name: Test (default features)
         run: cargo test --workspace
       - name: Build (library only, no default features)
         run: cargo build --no-default-features
       - name: Test (png feature only)
         run: cargo test --lib --no-default-features --features png
+      # Builds the crate from the .crate file crates.io would receive, so a
+      # source file left out of `include` in Cargo.toml fails here, not for
+      # the first person who adds the published version as a dependency.
+      - name: Package for crates.io
+        run: cargo package -p terrain-generator --locked
 
       # keeps the declared rust-version honest: bump it here if this fails.
-      # The GUI is left out: it is an unpublished app built with stable, and
-      # checking it here would let eframe's MSRV dictate the libraries'
-      # (and compile its ~400 crates a second time with another toolchain).
+      # The GUI is not in this workspace, so it is not checked: it is an
+      # unpublished app, and eframe's MSRV must not dictate the libraries'.
       - name: Verify MSRV (rust-version in Cargo.toml)
         run: |
           MSRV=$(cargo metadata --format-version 1 --no-deps | python3 -c "
@@ -79,7 +88,40 @@ jobs:
           print(max(vs, key=lambda v: tuple(int(x) for x in v.split('.'))))")
           echo "declared MSRV: $MSRV"
           rustup toolchain install "$MSRV" --profile minimal
-          cargo +"$MSRV" check --workspace --exclude terrain-gui --locked
+          cargo +"$MSRV" check --workspace --locked
+
+  # The GUI is its own Cargo workspace (see `exclude` in Cargo.toml), so it
+  # gets its own job: it runs alongside the others instead of after them,
+  # and its ~440 crates get a cache of their own rather than inflating the
+  # libraries'.
+  gui:
+    name: GUI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read the pinned toolchain
+        id: toolchain
+        shell: bash
+        run: |
+          v=$(sed -n 's/^rust *= *"\([^"]*\)".*/\1/p' mise.toml)
+          test -n "$v" || { echo 'no rust = "..." in mise.toml' >&2; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gui -> target
+          cache-on-failure: true
+          # see the note in the Rust job
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Format
+        run: cargo fmt --manifest-path gui/Cargo.toml --check
+      - name: Clippy
+        run: cargo clippy --manifest-path gui/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --manifest-path gui/Cargo.toml --locked
 
   elixir:
     name: Elixir
@@ -105,14 +147,30 @@ jobs:
         with:
           otp-version: "29"
           elixir-version: "1.20"
+      # --check-locked is Cargo's --locked: a mix.exs change without its
+      # mix.lock fails here instead of resolving afresh on the runner.
       - name: Fetch dependencies
-        run: mix deps.get
+        run: mix deps.get --check-locked
       - name: Check formatting
         run: mix format --check-formatted
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
       - name: Test
         run: mix test
+      # **Builds the NIF from the Hex package, as a user's `mix compile`
+      # does.** Cargo needs every member of the workspace to build any of
+      # them, so a crate added to the workspace but not to `files` in
+      # mix.exs breaks every install from Hex, while the checkout above
+      # still builds. That is how 0.3.0's package was found broken, before
+      # its first publish. `cargo tree --locked` also fails if the shipped
+      # Cargo.lock is out of date, which a plain build would silently fix.
+      - name: Build from the Hex package
+        run: |
+          mix hex.build --unpack --output "$RUNNER_TEMP/hex"
+          cd "$RUNNER_TEMP/hex"
+          cargo tree --locked --manifest-path native/terrain_generator_nif/Cargo.toml > /dev/null
+          mix deps.get
+          mix compile --warnings-as-errors
 
   java:
     name: Java

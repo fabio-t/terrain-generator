@@ -108,5 +108,5 @@ pub use render::RenderError;
 pub use render::{Layer, RenderStyle, UnknownLayer};
 pub use terrain::{
     ArchipelagoParams, BreachParams, ErosionParams, IslandParams, NoiseParams, ParamError,
-    RiverParams, RiverThreshold, Terrain, TerrainBuilder,
+    RiverParams, RiverThreshold, Terrain, TerrainBuilder, MAX_CELLS,
 };

@@ -6,6 +6,9 @@ target/
 # Cargo.lock IS committed: CI builds with --locked, and the CLI, the GUI and
 # the bindings all want a reproducible dependency graph. The determinism
 # contract depends on it too, because `noise` produces part of our output.
+# mix.lock is committed for the same reason (CI runs `mix deps.get
+# --check-locked`). Hex leaves it out of the package, so users resolve
+# their own.
 
 # Elixir / Erlang
 _build/
@@ -15,6 +18,8 @@ erl_crash.dump
 *.ez
 *.beam
 terrain_generator-*.tar
+# the NIF, which `mix compile` copies here from target/ on every build
+priv/native/
 
 # Java
 java/out/

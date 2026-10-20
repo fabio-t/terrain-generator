@@ -43,8 +43,8 @@ fn height_layer_is_16_bit_and_preserves_elevation() {
 
     // 16 bits quantise to ~1.5e-5; 8 bits would lose 100x more, which is
     // the whole reason this layer is not written as an ordinary greyscale
-    for (i, chunk) in buf.chunks_exact(2).enumerate() {
-        let stored = u16::from_be_bytes([chunk[0], chunk[1]]) as f32 / 65535.0;
+    for (i, chunk) in buf.as_chunks::<2>().0.iter().enumerate() {
+        let stored = u16::from_be_bytes(*chunk) as f32 / 65535.0;
         let original = t.heightmap.as_slice()[i];
         assert!(
             (stored - original).abs() < 2e-5,

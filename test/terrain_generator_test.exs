@@ -103,6 +103,10 @@ defmodule TerrainGeneratorTest do
       TerrainGenerator.generate(width: -1)
     end
 
+    assert_raise ArgumentError, ~r/cells/, fn ->
+      TerrainGenerator.generate(width: 65_536, height: 65_536)
+    end
+
     assert_raise ArgumentError, ~r/sea_level/, fn ->
       TerrainGenerator.generate(sea_level: 1.5)
     end

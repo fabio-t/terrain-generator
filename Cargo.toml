@@ -1,5 +1,11 @@
 [workspace]
-members = [".", "gui", "native/terrain_generator_nif", "native/terrain_generator_ffi"]
+members = [".", "native/terrain_generator_nif", "native/terrain_generator_ffi"]
+# **The GUI is its own workspace** (gui/Cargo.toml, gui/Cargo.lock). The
+# libraries' graph stays at their ~50 crates instead of eframe's ~440. The
+# Hex package, which must ship every member of this workspace for Cargo to
+# build the NIF, carries no GUI source. And an eframe release can never move
+# the libraries' lockfile.
+exclude = ["gui"]
 
 [workspace.package]
 # Minimum supported Rust version for every crate here.
@@ -8,7 +14,7 @@ rust-version = "1.91"
 
 [package]
 name = "terrain-generator"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 rust-version.workspace = true
 license = "Apache-2.0"
@@ -59,22 +65,22 @@ opt-level = 3
 
 # **Tests run optimised code where it matters, and nowhere else.** The test
 # suites generate and erode whole maps, which unoptimised is the slow part:
-# 27 s of the run. Optimising this crate and `noise` (the per-cell sampler)
-# takes it to 5 s and costs nothing measurable to compile. Measured cold,
-# `cargo test --workspace` on 4 cores:
+# 26 s of the run. Optimising this crate and `noise` (the per-cell sampler)
+# takes it to 5 s for 2 s more compile. Measured cold, `cargo test
+# --workspace` on 4 cores, after the GUI left the workspace:
 #
 #                                         compile   run
-#   default (everything opt-level 0)        89 s   27 s
-#   this crate 1, noise 3                   78 s    5 s
-#   every crate 1                          201 s    4 s
-#   this crate 1, every dependency 3       336 s    4 s
+#   default (everything opt-level 0)        11 s   26 s
+#   this crate 1, noise 3                   13 s    5 s
+#   every crate 1                           18 s    4 s
+#   this crate 1, every dependency 3        42 s    4 s
 #
-# Warm, with only the workspace crates rebuilt (a CI run off `main`'s
-# cache): 2 s + 26 s before, 2 s + 5 s with this.
+# Warm (a CI run off `main`'s cache), only the run differs: 26 s before,
+# 5 s with this.
 #
 # The blanket `package."*"` override is what islandur uses, but there the
-# dependencies are the hot path; here they are mostly the GUI's eframe and
-# wgpu, which no test runs, and optimising them alone added four minutes.
+# dependencies are the hot path. Here only `noise` is: optimising clap, png
+# and rustler as well triples the compile and saves a second of run.
 # Debug assertions and overflow checks stay on: opt-level does not touch them.
 [profile.dev.package.terrain-generator]
 opt-level = 1

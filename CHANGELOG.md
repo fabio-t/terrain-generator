@@ -7,19 +7,38 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
-## Unreleased
+## 0.3.0 — 2026-10-20
+
+A desktop GUI for tuning, previewing and exporting terrain, contributed by
+@romangrigorii. The libraries gain progress reporting, and `noise` is now
+pinned exactly. The minor version moves because that pin can conflict
+with a different `noise` 0.9 patch in your own dependency graph.
+
+This is the first release published to
+[crates.io](https://crates.io/crates/terrain-generator) and
+[Hex](https://hex.pm/packages/terrain_generator), so neither library
+needs a git dependency any more.
 
 ### GUI
 
-- New `terrain-gui` desktop app in `gui/` (`cargo run -p terrain-gui
-  --release`): every CLI generation option as a control, a live preview
-  with a per-cell readout, progress while it generates, and export of the
-  picture, the 16-bit heightmap, or every layer. It also shows the CLI
-  command that reproduces the current map. Not published to crates.io.
+- New `terrain-gui` desktop app in `gui/` (`cargo run --release
+  --manifest-path gui/Cargo.toml`): every CLI generation option as a
+  control, a live preview with a per-cell readout, progress while it
+  generates, and export of the picture, the 16-bit heightmap, or every
+  layer. It also shows the CLI command that reproduces the current map.
+  Its exports are identical to the CLI's for the same settings.
   Contributed by @romangrigorii (#8).
+- Not among the release downloads yet: build it from a clone with the
+  command above. It is not published to crates.io, and it is a separate
+  Cargo workspace, so none of the libraries depend on it or ship it.
+  On Linux, its file dialogs use `xdg-desktop-portal`, which desktop
+  sessions run.
 
 ### Rust library
 
+- On crates.io: `terrain-generator = { version = "0.3",
+  default-features = false }`, and `cargo install terrain-generator` for
+  the CLI. API documentation is on docs.rs.
 - `noise` is pinned to exactly 0.9.0. Before, it was `0.9`, so a
   `cargo update` could pull in a new 0.9 patch release, and with it
   different terrain, without this crate changing. If your own code
@@ -29,9 +48,25 @@ here. If you regenerate worlds from stored seeds, pin an exact version.
   has got, as a fraction from 0 to 1 that never goes backwards plus a
   short stage name. `try_generate` is unchanged and now calls it with a
   no-op callback.
+- A map may have at most `MAX_CELLS` cells (2³² − 1, so 65535 × 65535),
+  and `try_generate` returns a `ParamError` for anything bigger. Before,
+  such a map got past validation: hydrology's 32-bit cell indices
+  wrapped, and in a release build `width * height` could too, giving a
+  panic or wrong layers instead of an error.
+
+### Elixir and Java
+
+- The Elixir library is on Hex: `{:terrain_generator, "~> 0.3"}`. The
+  NIF still compiles from source, so Rust 1.91+ is needed at compile
+  time. Documentation is on HexDocs.
+- The same cell limit applies. For a bigger map, the Elixir wrapper
+  raises `ArgumentError`, the C ABI returns `TG_INVALID_PARAMS`, and Java
+  throws `TerrainException`.
+- No other API changes in either. The NIF, the C ABI and the jar are
+  rebuilt on the updated dependencies.
 
 No change to generated terrain: the same seed and parameters give the
-same map, progress callback or not.
+same map as 0.2.x, progress callback or not.
 
 ## 0.2.1 — 2026-08-23
 
