@@ -1,8 +1,11 @@
 name: Release
 
-# Pushing a tag like v0.1.1 creates a GitHub release with prebuilt CLI
-# binaries attached. A tag with a pre-release suffix (v0.1.5-rc3) is
-# published as a pre-release.
+# A release is a tag like v0.1.1: a GitHub release with prebuilt CLI
+# binaries and the jar attached, then crates.io and Hex. A tag with a
+# pre-release suffix (v0.1.5-rc3) stops at a GitHub pre-release.
+#
+# The tag can be pushed by hand, or made by this workflow: a manual run on
+# `main` with `cut` tags `main` at the version its manifests carry.
 on:
   push:
     tags:
@@ -12,9 +15,18 @@ on:
       - "v*"
       - "[0-9]*"
   # Manual runs build and test every artefact but stop short of publishing
-  # (see the release job's condition), so the packaging can be exercised on
-  # a branch without burning a tag.
+  # (see the plan job), so the packaging can be exercised on a branch
+  # without burning a tag. A manual run on a tag releases that tag, which
+  # is how a release whose tag already exists is finished.
   workflow_dispatch:
+    inputs:
+      cut:
+        description: "Release: tag main at its manifests' version and publish it (main only)"
+        type: boolean
+        default: false
+
+# Two cuts of one ref at once would race to the same tag and registries.
+concurrency: release-${{ github.ref }}
 
 # **Read-only by default; only the job that creates the release may
 # write.** The build jobs compile and run code from every dependency, on
@@ -26,14 +38,21 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # A branch name can contain slashes, which would be an illegal filename,
-  # so only tag runs name artefacts after the ref.
-  RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
 jobs:
-  test:
-    name: Test before release
+  # **Decides once what this run releases, and every later job reads it
+  # from here.** Nothing downstream looks at `github.ref`, which on a cut
+  # is `main` rather than the tag, and no job is ever skipped on the way
+  # to the release, so none can silently skip the release with it.
+  plan:
+    name: Plan the release
     runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      cut: ${{ steps.plan.outputs.cut }}
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v7
       # **A tag that disagrees with the version stops the release here,
@@ -42,23 +61,72 @@ jobs:
       # still at 0.3.0 would make a GitHub release called v0.4.0 and then
       # fail to republish 0.3.0. A pre-release tag (v0.4.0-rc1) is checked
       # against its base version, which the manifests already carry.
-      - name: Check the tag matches the version
-        if: github.ref_type == 'tag'
+      - name: Decide what this run releases
+        id: plan
+        env:
+          CUT: ${{ inputs.cut }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
-          want="${tag%%-*}"
+          cut=false
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="$GITHUB_REF_NAME"
+          elif [ "$CUT" = true ]; then
+            # A release is the reviewed, squash-merged release PR, so only
+            # `main` is cut. A candidate is a hand-pushed -rcN tag.
+            if [ "$GITHUB_REF" != refs/heads/main ]; then
+              echo "::error::cut releases main, and this run is on $GITHUB_REF_NAME"
+              exit 1
+            fi
+            tag="v$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)"
+            rc=0
+            git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || rc=$?
+            case $rc in
+              0) echo "::error::$tag already exists: bump the version, or run this workflow on the tag to finish its release"
+                 exit 1 ;;
+              2) ;;
+              *) echo "::error::could not list the remote's tags"; exit 1 ;;
+            esac
+            cut=true
+          else
+            # A branch name can contain slashes, which would be an illegal
+            # filename, so a dry run names its artefacts "dev".
+            { echo release=false; echo cut=false; echo tag=dev
+              echo version=dev; echo prerelease=false; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version="${tag#v}"
+          base="${version%%-*}"
+          prerelease=false
+          [ "$version" = "$base" ] || prerelease=true
           bad=0
           for f in Cargo.toml native/terrain_generator_nif/Cargo.toml \
                    native/terrain_generator_ffi/Cargo.toml mix.exs; do
             have=$(sed -n -e 's/^version = "\(.*\)"$/\1/p' \
                           -e 's/^  @version "\(.*\)"$/\1/p' "$f" | head -1)
-            if [ "$have" != "$want" ]; then
-              echo "::error file=$f::version is '$have', the tag says $want"
+            if [ "$have" != "$base" ]; then
+              echo "::error file=$f::version is '$have', the tag says $base"
               bad=1
             fi
           done
-          exit $bad
+          # The section becomes the release notes. A candidate may come
+          # before its section is named, so only a final requires it.
+          if [ $prerelease = false ] &&
+             ! awk -v h="## $base" 'index($0, h " ") == 1 || $0 == h { f = 1 } END { exit !f }' CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::no '## $base' section"
+            bad=1
+          fi
+          [ $bad = 0 ] || exit 1
+          { echo release=true; echo cut=$cut; echo tag=$tag
+            echo version=$version; echo prerelease=$prerelease; } >> "$GITHUB_OUTPUT"
+          echo "::notice::releasing $tag$([ $cut = true ] && echo ", to be tagged on $GITHUB_SHA")"
+
+  test:
+    name: Test before release
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
       # The toolchain is pinned in mise.toml (see the comment there), and
       # read from it here so the two cannot disagree. Bash on every runner,
       # Windows included; the pattern stops at the closing quote so a CRLF
@@ -87,8 +155,10 @@ jobs:
 
   build:
     name: Build ${{ matrix.target }}
-    needs: test
+    needs: [plan, test]
     runs-on: ${{ matrix.os }}
+    env:
+      RELEASE_VERSION: ${{ needs.plan.outputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -248,8 +318,10 @@ jobs:
 
   jar:
     name: Package the Java bindings
-    needs: natives
+    needs: [plan, natives]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ needs.plan.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
 
@@ -291,16 +363,36 @@ jobs:
 
   release:
     name: Publish release
-    needs: [build, jar]
-    # Only a tag publishes. A manual run stops here, having still built and
-    # tested every artefact the release would have carried.
-    if: github.ref_type == 'tag'
+    needs: [plan, build, jar]
+    # A dry run stops here, having still built and tested every artefact
+    # the release would have carried.
+    if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-latest
     permissions:
-      # creates the release and uploads its assets
+      # pushes a cut's tag, creates the release and uploads its assets
       contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.plan.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
+
+      # **A cut tags only now, once everything has built and passed**, so
+      # a failed build leaves no tag to clean up. A tag pushed with this
+      # job's token starts no workflow run, so this run carries on as the
+      # release. A re-run finds its own tag already there and goes on.
+      - name: Tag the release
+        if: needs.plan.outputs.cut == 'true'
+        run: |
+          set -euo pipefail
+          at=$(git ls-remote origin "refs/tags/$RELEASE_VERSION^{}" | cut -f1)
+          if [ "$at" = "$GITHUB_SHA" ]; then
+            echo "$RELEASE_VERSION is already on $GITHUB_SHA"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$RELEASE_VERSION" -m "$RELEASE_VERSION" "$GITHUB_SHA"
+          git push origin "refs/tags/$RELEASE_VERSION"
 
       # Named patterns rather than "everything": the per-platform native
       # artifacts are build inputs for the jar, not release assets.
@@ -351,9 +443,10 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ needs.plan.outputs.tag }}
           files: dist/*
           # a hyphen in the tag (v0.1.5-rc3) marks a semver pre-release
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ needs.plan.outputs.prerelease == 'true' }}
           body_path: notes.md
           # commit list is appended below the CHANGELOG text
           generate_release_notes: true
@@ -368,9 +461,11 @@ jobs:
   # than failing on the duplicate.
   crates-io:
     name: Publish to crates.io
-    needs: release
-    if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    needs: [plan, release]
+    if: needs.plan.outputs.release == 'true' && needs.plan.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
     permissions:
       contents: read
       # Trusted publishing: crates.io exchanges this job's OIDC token for a
@@ -396,10 +491,10 @@ jobs:
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' \
             -A 'terrain-generator release workflow (github.com/fabio-t/terrain-generator)' \
-            "https://crates.io/api/v1/crates/terrain-generator/${GITHUB_REF_NAME#v}")
+            "https://crates.io/api/v1/crates/terrain-generator/${VERSION}")
           echo "crates.io answered $code"
           if [ "$code" = 200 ]; then
-            echo "::notice::terrain-generator ${GITHUB_REF_NAME#v} is already on crates.io"
+            echo "::notice::terrain-generator ${VERSION} is already on crates.io"
             echo "yes=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: rust-lang/crates-io-auth-action@v1
@@ -413,9 +508,11 @@ jobs:
 
   hex:
     name: Publish to Hex
-    needs: release
-    if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    needs: [plan, release]
+    if: needs.plan.outputs.release == 'true' && needs.plan.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
     permissions:
       contents: read
     steps:
@@ -441,10 +538,10 @@ jobs:
         id: published
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' \
-            "https://hex.pm/api/packages/terrain_generator/releases/${GITHUB_REF_NAME#v}")
+            "https://hex.pm/api/packages/terrain_generator/releases/${VERSION}")
           echo "hex.pm answered $code"
           if [ "$code" = 200 ]; then
-            echo "::notice::terrain_generator ${GITHUB_REF_NAME#v} is already on Hex"
+            echo "::notice::terrain_generator ${VERSION} is already on Hex"
             echo "yes=true" >> "$GITHUB_OUTPUT"
           fi
       # Hex has no trusted publishing, so this is an API key with only the

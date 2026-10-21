@@ -420,11 +420,13 @@ CI (formatting, clippy, both test suites) runs automatically on pushes
 to `main`, and on demand for any other branch via **Run workflow** on
 the [Actions tab](https://github.com/fabio-t/terrain-generator/actions/workflows/ci.yml)
 — pull requests are not built automatically. Releases
-are cut by pushing a tag: `v1.2.3` (or `1.2.3`) publishes a release with
+are cut by running the Release workflow on `main` with `cut`, which tags
+`main` at its version, or by pushing a tag: `v1.2.3` (or `1.2.3`)
+publishes a release with
 CLI binaries for Linux, macOS and Windows attached, plus the Java jar with
 every platform's native library inside it, and release notes taken from
-that version's CHANGELOG section; a pre-release tag like `v1.2.3-rc1`
-publishes a GitHub pre-release.
+that version's CHANGELOG section, then publishes to crates.io and Hex; a
+pre-release tag like `v1.2.3-rc1` publishes a GitHub pre-release only.
 
 ## License
 
