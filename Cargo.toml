@@ -14,7 +14,7 @@ rust-version = "1.91"
 
 [package]
 name = "terrain-generator"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 rust-version.workspace = true
 license = "Apache-2.0"
@@ -23,11 +23,13 @@ description = "Procedural terrain generator: fractal noise, hydraulic erosion an
 repository = "https://github.com/fabio-t/terrain-generator"
 keywords = ["terrain", "procedural", "heightmap", "erosion", "noise"]
 categories = ["game-development", "simulation"]
+# Anchored with `/`: these follow .gitignore rules, so a bare "README.md"
+# also matches every README under deps/ once `mix deps.get` has run.
 include = [
-    "src/**",
-    "Cargo.toml",
-    "README.md",
-    "LICENSE",
+    "/src/**",
+    "/Cargo.toml",
+    "/README.md",
+    "/LICENSE",
 ]
 
 [dependencies]

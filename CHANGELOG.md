@@ -7,14 +7,17 @@ Generated terrain is part of the public contract: any change to the output
 for a given seed and parameter set is a breaking change, and is called out
 here. If you regenerate worlds from stored seeds, pin an exact version.
 
-## Unreleased
+## 0.3.1 — 2026-10-21
+
+A documentation release. The code is the same as 0.3.0's, and so is the
+generated terrain.
 
 ### Elixir
 
 - The README on hex.pm shows its pictures, and its links to the API docs
   work.
 
-## 0.3.0 — 2026-10-20
+## 0.3.0 — 2026-10-21
 
 A desktop GUI for tuning, previewing and exporting terrain, contributed by
 @romangrigorii. The libraries gain progress reporting, and `noise` is now

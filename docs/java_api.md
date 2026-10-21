@@ -37,7 +37,7 @@ Put it on the classpath and it works — no `cargo`, no `LD_LIBRARY_PATH`,
 nothing to install:
 
 ```sh
-java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.3.0.jar:. YourApp
+java --enable-native-access=ALL-UNNAMED -cp terrain-generator-0.3.1.jar:. YourApp
 ```
 
 This is the same trick sqlite-jdbc, LWJGL and netty-tcnative use, and it
@@ -87,7 +87,7 @@ one directory named the way the loader expects and call the packaging
 script directly:
 
 ```sh
-bash java/package-jar.sh 0.3.0 path/to/natives
+bash java/package-jar.sh 0.3.1 path/to/natives
 ```
 
 The sources are plain Java with no dependencies, so they also drop into
