@@ -131,13 +131,18 @@ had four passes, and its description records what each found:
    packages ship what they should (`cargo package --list`,
    `mix hex.build --unpack`).
 
-Then the release PR is squash-merged and the tag (`v1.2.3`, annotated) is
-pushed on that commit of `main`. `release.yml` checks that the tag matches
-the manifests, builds the CLI and the native libraries for every
-platform, and publishes the GitHub release, with that version's CHANGELOG
-section as the notes. Only after that does it publish to crates.io
-(trusted publishing) and Hex (the `HEX_API_KEY` secret). Pre-release tags
-(`v1.2.3-rc1`) stop at the GitHub release.
+Then the release PR is squash-merged, and `release.yml` is run on `main`
+with `cut` (Actions → Release → Run workflow). It checks that the
+manifests agree and the CHANGELOG names the version, builds and tests the
+CLI and the native libraries for every platform, and only then tags that
+commit (`v1.2.3`, annotated) and publishes the GitHub release, with that
+version's CHANGELOG section as the notes. After that it publishes to
+crates.io (trusted publishing) and Hex (the `HEX_API_KEY` secret). A
+cloud agent session cannot push tags, which is why the workflow makes
+the tag. A hand-pushed tag releases the same way, and is how a
+pre-release (`v1.2.3-rc1`) is made; it stops at the GitHub release. If a
+release fails after its tag exists, run `release.yml` on the tag to
+finish it: every step skips what is already published.
 
 ## Writing
 
