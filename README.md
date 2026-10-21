@@ -11,7 +11,7 @@ heightmap, shapes it into an island with noisy coastlines, carves it with
 particle-based **hydraulic erosion**, and routes water over the result so
 that **rivers follow the eroded valleys** and depressions become lakes.
 
-![example map](docs/example.png)
+![example map](https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/example.png)
 
 It is usable five ways:
 
@@ -115,9 +115,9 @@ round island, `1` (the default) carves bays, peninsulas and offshore
 islets.
 
 <table><tr>
-<td align="center"><img src="docs/options/coast-noise-0.png" width="240"><br><code>--coast-noise 0</code></td>
-<td align="center"><img src="docs/options/coast-noise-05.png" width="240"><br><code>--coast-noise 0.5</code></td>
-<td align="center"><img src="docs/options/default.png" width="240"><br><code>--coast-noise 1</code> (default)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/coast-noise-0.png" width="240"><br><code>--coast-noise 0</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/coast-noise-05.png" width="240"><br><code>--coast-noise 0.5</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br><code>--coast-noise 1</code> (default)</td>
 </tr></table>
 
 ### Island size — `--island` / `--no-island`
@@ -127,9 +127,9 @@ mask at all (terrain runs to the borders — useful for tiling a larger
 world out of maps).
 
 <table><tr>
-<td align="center"><img src="docs/options/island-07.png" width="240"><br><code>--island 0.7</code></td>
-<td align="center"><img src="docs/options/default.png" width="240"><br><code>--island 1.0</code> (default)</td>
-<td align="center"><img src="docs/options/no-island.png" width="240"><br><code>--no-island</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/island-07.png" width="240"><br><code>--island 0.7</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br><code>--island 1.0</code> (default)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/no-island.png" width="240"><br><code>--no-island</code></td>
 </tr></table>
 
 ### Erosion — `--no-erosion` / `--droplets`
@@ -139,9 +139,9 @@ simulates one droplet per cell; more droplets keep carving — valleys
 deepen, sediment builds plains, coastlines erode.
 
 <table><tr>
-<td align="center"><img src="docs/options/no-erosion.png" width="240"><br><code>--no-erosion</code></td>
-<td align="center"><img src="docs/options/default.png" width="240"><br>default (262k droplets)</td>
-<td align="center"><img src="docs/options/droplets-1m.png" width="240"><br><code>--droplets 1000000</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/no-erosion.png" width="240"><br><code>--no-erosion</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br>default (262k droplets)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/droplets-1m.png" width="240"><br><code>--droplets 1000000</code></td>
 </tr></table>
 
 ### River density — `--rivers`
@@ -151,9 +151,9 @@ accumulation, so they always follow the valleys). Shown as 1:1 crops so
 the individual rivers are visible.
 
 <table><tr>
-<td align="center"><img src="docs/options/rivers-0003.png" width="240"><br><code>--rivers 0.003</code></td>
-<td align="center"><img src="docs/options/rivers-001.png" width="240"><br><code>--rivers 0.01</code> (default)</td>
-<td align="center"><img src="docs/options/rivers-004.png" width="240"><br><code>--rivers 0.04</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/rivers-0003.png" width="240"><br><code>--rivers 0.003</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/rivers-001.png" width="240"><br><code>--rivers 0.01</code> (default)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/rivers-004.png" width="240"><br><code>--rivers 0.04</code></td>
 </tr></table>
 
 A share of the land gives a different river network at every map size.
@@ -169,9 +169,9 @@ Cells at or below this elevation are ocean. Raising it drowns the
 lowlands and turns valley systems into fjord-like inlets.
 
 <table><tr>
-<td align="center"><img src="docs/options/sea-level-003.png" width="240"><br><code>--sea-level 0.03</code></td>
-<td align="center"><img src="docs/options/default.png" width="240"><br><code>--sea-level 0.08</code> (default)</td>
-<td align="center"><img src="docs/options/sea-level-02.png" width="240"><br><code>--sea-level 0.2</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/sea-level-003.png" width="240"><br><code>--sea-level 0.03</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br><code>--sea-level 0.08</code> (default)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/sea-level-02.png" width="240"><br><code>--sea-level 0.2</code></td>
 </tr></table>
 
 ### Base noise — `--frequency` / `--octaves`
@@ -184,9 +184,9 @@ give smoother, softer relief. Between octaves, `--lacunarity` (default
 amplitude: a higher persistence keeps more of the fine detail.
 
 <table><tr>
-<td align="center"><img src="docs/options/frequency-15.png" width="240"><br><code>--frequency 1.5</code></td>
-<td align="center"><img src="docs/options/frequency-4.png" width="240"><br><code>--frequency 4</code></td>
-<td align="center"><img src="docs/options/octaves-4.png" width="240"><br><code>--octaves 4</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/frequency-15.png" width="240"><br><code>--frequency 1.5</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/frequency-4.png" width="240"><br><code>--frequency 4</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/octaves-4.png" width="240"><br><code>--octaves 4</code></td>
 </tr></table>
 
 ### Archipelagos — `--archipelago`
@@ -198,9 +198,9 @@ is approximate, because neighbours can merge and coastline noise can split
 an island in two. Erosion and rivers work per landmass.
 
 <table><tr>
-<td align="center"><img src="docs/options/default.png" width="240"><br>single island (default)</td>
-<td align="center"><img src="docs/options/archipelago-5.png" width="240"><br><code>--archipelago 5</code></td>
-<td align="center"><img src="docs/options/archipelago-9.png" width="240"><br><code>--archipelago 9 --islands-size 0.22</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br>single island (default)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/archipelago-5.png" width="240"><br><code>--archipelago 5</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/archipelago-9.png" width="240"><br><code>--archipelago 9 --islands-size 0.22</code></td>
 </tr></table>
 
 ### Draining big basins — `--breach-basins`
@@ -212,8 +212,8 @@ map, along the path where water would wear through first, leaving valleys
 instead of lakes.
 
 <table><tr>
-<td align="center"><img src="docs/options/breach-off.png" width="240"><br>default (basins stay lakes)</td>
-<td align="center"><img src="docs/options/breach-on.png" width="240"><br><code>--breach-basins 0.002</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/breach-off.png" width="240"><br>default (basins stay lakes)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/breach-on.png" width="240"><br><code>--breach-basins 0.002</code></td>
 </tr></table>
 
 ### Output style — `--grey`
@@ -223,8 +223,8 @@ heightmap (black = 0, white = 1), ready to import into game engines and
 other tools.
 
 <table><tr>
-<td align="center"><img src="docs/options/default.png" width="240"><br>default (shaded)</td>
-<td align="center"><img src="docs/options/greyscale.png" width="240"><br><code>--grey</code></td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/default.png" width="240"><br>default (shaded)</td>
+<td align="center"><img src="https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/options/greyscale.png" width="240"><br><code>--grey</code></td>
 </tr></table>
 
 ## Getting the data out — `--layers`
@@ -244,7 +244,7 @@ default when `--layers` is not given.
 
 ## Desktop GUI
 
-![the desktop GUI](docs/gui.png)
+![the desktop GUI](https://github.com/fabio-t/terrain-generator/raw/HEAD/docs/gui.png)
 
 ```sh
 cargo run --release --manifest-path gui/Cargo.toml
@@ -294,7 +294,7 @@ routing is skipped entirely and `heightmap` is the single source of truth.
 The `ocean` mask is still computed, so "sea or inland basin?" stays
 answerable without it.
 
-Full reference: [docs/rust_api.md](docs/rust_api.md), or `cargo doc --open`.
+Full reference: [docs/rust_api.md](https://github.com/fabio-t/terrain-generator/blob/HEAD/docs/rust_api.md), or `cargo doc --open`.
 
 ### Determinism and stored worlds
 
@@ -336,7 +336,7 @@ Heightmap, flow, river and lake buffers are returned as plain binaries
 dirty CPU scheduler, so generation never blocks your schedulers.
 
 Full reference: [HexDocs](https://hexdocs.pm/terrain_generator), or
-[docs/elixir_api.md](docs/elixir_api.md).
+[docs/elixir_api.md](https://github.com/fabio-t/terrain-generator/blob/HEAD/docs/elixir_api.md).
 
 ## Java library
 
@@ -401,8 +401,8 @@ Layers can be copied into Java arrays or borrowed as a zero-copy
 hashes to the same checksum as the Rust test suite pins, so the three
 language bindings are known to produce identical terrain.
 
-Full reference: [docs/java_api.md](docs/java_api.md). The C interface
-itself is [`include/terrain_generator.h`](include/terrain_generator.h), if
+Full reference: [docs/java_api.md](https://github.com/fabio-t/terrain-generator/blob/HEAD/docs/java_api.md). The C interface
+itself is [`include/terrain_generator.h`](https://github.com/fabio-t/terrain-generator/blob/HEAD/include/terrain_generator.h), if
 you would rather use `jextract` or call it from C/C++.
 
 [ffm]: https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html
