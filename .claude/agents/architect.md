@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Scaffolds a new subsystem or a change spanning many files before a coder fills it in, and finds the root cause of a failure the fixer could not. Leaves types, signatures, stubs, failing tests and a HANDOFF.md in a worktree. Never commits or pushes.
-disallowedTools: Agent
+disallowedTools: Agent, mcp__github__create_or_update_file, mcp__github__push_files, mcp__github__delete_file, mcp__github__create_branch, mcp__github__create_pull_request, mcp__github__update_pull_request, mcp__github__merge_pull_request, mcp__github__issue_write, mcp__github__add_issue_comment, mcp__github__pull_request_review_write
 model: claude-opus-5-5
 effort: medium
 ---

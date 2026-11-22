@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Writes specs, plans and design documents, and answers the open-ended questions the lead cannot answer from the files. Use before any new feature is coded, and whenever a decision needs depth. Writes planning text only, never code.
-tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, WebSearch
+tools: Read, Grep, Glob, Bash, Edit, Write, Skill, WebFetch, WebSearch
 disallowedTools: Agent
 model: claude-opus-5-5
 effort: high

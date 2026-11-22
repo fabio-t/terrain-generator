@@ -1,7 +1,7 @@
 ---
 name: fixer
 description: Fixes a failing CI job or a round of review findings on a branch, in its worktree. Hands over to the architect when the second attempt fails, the failure does not reproduce locally, or it is intermittent. Never commits or pushes.
-disallowedTools: Agent
+disallowedTools: Agent, mcp__github__create_or_update_file, mcp__github__push_files, mcp__github__delete_file, mcp__github__create_branch, mcp__github__create_pull_request, mcp__github__update_pull_request, mcp__github__merge_pull_request, mcp__github__issue_write, mcp__github__add_issue_comment, mcp__github__pull_request_review_write
 model: claude-sonnet-5-5
 effort: medium
 ---

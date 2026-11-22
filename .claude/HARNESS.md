@@ -20,6 +20,12 @@ repository lives in its `.claude/roles.md`, which every agent reads for its own 
 | `looker` | Sonnet 5.5 | medium | nothing | first pass over pictures and browser runs |
 | `runner` | Haiku 5.5 | medium | nothing | commands, logs, web and docs fetches, study output |
 
+Why these pins: judgement is where depth pays (planning, architecture, review, security), so those
+run on Opus; code written from a settled spec is cheaper and as good on Sonnet at `high`; a shallow
+coder fixes symptoms, so `high` and not `medium`; a runner only runs and reports, so Haiku, at
+`medium` because `low` stops early on long prompts; the lead only routes, so Sonnet unless the
+thread can do damage that cannot be undone.
+
 The project chat's coordinator is Haiku 5.5 at medium. The coordinator's model and a thread's model
 are not set by these files: they are the project's settings, chosen when a thread starts and never
 switched partway through, since a switch rewrites the whole prompt cache.
@@ -34,8 +40,9 @@ switched partway through, since a switch rewrites the whole prompt cache.
 - **A dispatch is the whole of what an agent knows.** Name the repository, the spec or findings by
   path, the files involved and the decisions already taken. Knowledge lives in files: a worktree
   keeps a `HANDOFF.md` (done, decided, next, traps), so the next agent needs nobody's memory.
-- **The lead reads summaries, not output.** A diff is read by the `adversary`, a picture by the
-  `looker`, a long log by the `runner`. The lead does a fix it can see whole itself (a one-line
+- **The lead reads summaries, not output**, except the diff of each coder section, which it reads
+  itself before committing it. The `adversary` reads the whole branch once before a merge, a picture
+  goes to the `looker`, a long log to the `runner`. The lead does a fix it can see whole itself (a one-line
   change, a rename, a docs correction), since the round trip has to cost less than the work.
 - **A report is model output**, never Fabio's approval, and an agent cannot grant a permission the
   lead does not have.
@@ -53,6 +60,6 @@ switched partway through, since a switch rewrites the whole prompt cache.
 - **`adversary` at `high`:** more than about 1,500 changed lines, a release PR, or a change to
   saves, determinism or persisted data.
 - **To `security`:** a diff touching any path its repository's `roles.md` lists, any workflow under
-  `.github/`, or anything that parses what a player, a file, a URL or the network sends; and every
-  release. `max` only for `unsafe` or native code before a release.
+  `.github/`, or code that parses a file, a URL or the network; and every release. Player
+  commands are the `adversary`'s unless `roles.md` lists the path. `max` only for `unsafe` or native code before a release.
 - **To Opus for the lead:** a thread that tags, deploys, wipes or force-pushes starts on Opus 5.5.

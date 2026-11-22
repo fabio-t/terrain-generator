@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Implements one section of a written spec or an architect's scaffold in its worktree, runs the local gate on what it touched, and reports the diff. A fresh coder for each section. Never commits or pushes.
-disallowedTools: Agent
+disallowedTools: Agent, mcp__github__create_or_update_file, mcp__github__push_files, mcp__github__delete_file, mcp__github__create_branch, mcp__github__create_pull_request, mcp__github__update_pull_request, mcp__github__merge_pull_request, mcp__github__issue_write, mcp__github__add_issue_comment, mcp__github__pull_request_review_write
 model: claude-sonnet-5-5
 effort: high
 ---
