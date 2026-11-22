@@ -97,8 +97,14 @@ rust-project.json
 # Per-tool instruction files and config directories would hold a second
 # copy of the rules that drifts away from the first, so they stay out. Point
 # your tool at AGENTS.md instead. A tool's own caches, histories, worktrees
-# and local settings are personal and stay out too.
-.claude/
+# and local settings are personal and stay out too. The one exception is the
+# agent harness shared with the maintainer's other repositories: the role
+# definitions, which hold no rules of this repository's, and roles.md, which
+# says which of AGENTS.md's rules each role needs.
+.claude/*
+!.claude/agents/
+!.claude/HARNESS.md
+!.claude/roles.md
 CLAUDE.local.md
 .cursor/
 .cursorrules
