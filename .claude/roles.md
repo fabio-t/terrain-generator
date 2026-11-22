@@ -6,55 +6,49 @@ the maintainer's other repositories; this file is not.
 
 ## planner
 
-A plan is a GitHub issue or a section of the PR description; there is no planning directory. An
-option is planned for every entry point at once (rule 4), and anything that moves generated output
-is planned as a breaking change (rule 1).
+AGENTS.md says where plans live nowhere, so a plan comes back in your reply, for the lead to put
+in the PR description or an issue; write no file unless the dispatch names one. Plan an option for
+every entry point at once (rule 4), and anything that moves generated output as a breaking change
+(rule 1).
 
 ## architect
 
-One core, five entry points: the library in `src/`, the CLI, the GUI in its own workspace under
-`gui/`, the NIF in `native/terrain_generator_nif/` and the C ABI in `native/terrain_generator_ffi/`.
-Generation stays in the core; an entry point only translates options and results.
+One core, five entry points (AGENTS.md, "What this is"). Generation stays in the core; an entry
+point only translates options and results.
 
 ## coder
 
-- Never update a golden checksum in `tests/determinism.rs` to get green. If one moves, stop and
-  report which layers and options moved.
-- `noise` stays pinned at `=0.9.0`.
-- Code in `src/` and `native/` builds on the MSRV in `Cargo.toml`; the GUI is exempt.
-- The library builds with `--no-default-features` and with `--features png` alone.
-- A new generation option reaches the CLI, the GUI, the NIF, the FFI and the README, or the report
-  says which it skips.
-- Bump no version. Commit lockfile changes with the dependency change.
-- A CHANGELOG entry under `## Unreleased`, grouped by entry point, for anything a user can notice.
-- Comments say why, never what.
+Rules 1 to 6 of `AGENTS.md` bind you as written, and rule 1 first: if a golden checksum moves,
+stop and report which layers and options, and never update it to get green. Change `Cargo.lock`
+with `Cargo.toml` in the same diff. Add a CHANGELOG entry where a user can notice the change.
 
-The gate on what you touched: `mise run ci`; `mise run elixir` where `lib/`, `test/` or the NIF
-moved; `mise run java` where `java/` or the FFI moved. If generation changed, render a map
-(`cargo run --release -- ...`) and give the reviewer its path.
+The gate on what you touched is "Checks" in `AGENTS.md`: `mise run ci`; `mise run elixir` where
+`lib/`, `test/` or the NIF moved; `mise run java` where `java/` or the FFI moved. If generation
+changed, render a map (`cargo run --release -- ...`) and give the reviewer its path.
 
 ## adversary
 
-Your remit is `AGENTS.md` in full, with determinism first: the same seed and parameters must give
-the same map on every platform and from every entry point. Also the MSRV, the feature builds, an
-option missing from an entry point, a version bumped outside a release, and `unsafe` in `native/`.
+Your remit is `AGENTS.md`'s rules in full, with determinism (rule 1) first. Also the MSRV, the
+feature builds, an option missing from an entry point, a version bumped outside a release, and
+`unsafe` in `native/`.
 
 ## security
 
-Paths that trigger it: `native/` (the `unsafe` code behind the C ABI and the NIF), `include/`,
-`java/`, and `.github/workflows/`. Threats that matter: a pointer, length or size crossing the C
+Paths that trigger it, and the only list of them: `native/` (the `unsafe` code behind the C ABI and
+the NIF), `include/` (the C header), `java/`, and anything under `.github/`. Threats that matter: a pointer, length or size crossing the C
 ABI or the NIF used before it is checked; a size from the caller that allocates without bound; a
-workflow permission wider than its job needs; a secret (`HEX_API_KEY`, the crates.io publishing)
-reaching a job that does not publish. Run `cargo audit` and `mix hex.audit` where they are
+workflow permission wider than its job needs; a secret (`HEX_API_KEY`) reaching a job that does not publish, or `id-token: write` (crates.io
+trusted publishing) granted to one that does not. Run `cargo audit` and `mix hex.audit` where they are
 installed, and say so where they are not. Every release gets this pass (`AGENTS.md`, "Releasing",
 pass 2).
 
 ## looker
 
 Maps come from the CLI (`cargo run --release -- --help` for the options) or `mise run gui`. Look
-for what passes every test: seams at chunk or tile boundaries, a straight line ruled across noise,
-rivers that run uphill or stop short of the sea, lakes with no outlet where breaching was on, an
-island mask that shows its shape function.
+for what passes every test: a straight line ruled across noise, rivers that run uphill or stop
+short of the sea, an island mask that shows its shape function, erosion that leaves visible
+banding. Small lakes without an outlet are by design (basin breaching only opens basins above its
+size fraction).
 
 ## runner
 

@@ -164,8 +164,8 @@ when work escalates. Those files are shared with the maintainer's other
 repositories and identical in each; [`.claude/roles.md`](.claude/roles.md)
 says which of this file's rules each role needs. A change made through
 agents still meets every rule above, and gets one adversarial review of the
-whole branch before it merges, with a security pass when it touches
-`native/`, `java/` or a workflow.
+whole branch before it merges, with a security pass when it touches a path
+the `security` section of `roles.md` lists.
 
 ## Agent-specific files
 
@@ -173,5 +173,7 @@ This file is the brief. Tool-specific instruction files (`GEMINI.md`,
 `.cursorrules`, `.windsurfrules`, and the like) are git-ignored, so the
 rules live in one place. Point your tool at this file instead.
 `CLAUDE.md` is the one exception: Claude Code reads only that name, and it
-contains nothing but an import of this file. `.claude/`'s harness files
-are the other: they hold roles, not rules.
+contains nothing but an import of this file. The tracked exception is
+`.claude/agents/`, `.claude/HARNESS.md` and `.claude/roles.md`: role
+definitions, and a file that cites this one's rules by number. If it
+restates a rule, it is wrong.
